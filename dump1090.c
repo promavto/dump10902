@@ -101,7 +101,7 @@ struct client {
     int buflen;                         /* Amount of data on buffer. */
 };
 
-/* Structure used to describe an aircraft in iteractive mode. */
+/* Структура, используемая для описания самолета в интерактивном режиме. */
 struct aircraft {
     uint32_t addr;      /* ICAO address */
     char hexaddr[7];    /* Printable ICAO address */
@@ -122,7 +122,7 @@ struct aircraft {
     struct aircraft *next; /* Next aircraft in our linked list. */
 };
 
-/* Program global state. */
+/* Глобальное состояние программы. */
 struct {
     /* Internal state */
     pthread_t reader_thread;
@@ -169,6 +169,7 @@ struct {
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
     int aggressive;                 /* Aggressive detection algorithm. */
+    int uart;                       /* Enable uart. */
 
     /* Interactive mode */
     struct aircraft *aircrafts;
@@ -276,6 +277,7 @@ void modesInitConfig(void) {
     Modes.aggressive = 0;
     Modes.interactive_rows = getTermRows();
     Modes.loop = 0;
+    Modes.uart = 0;
 }
 
 void modesInit(void) {
@@ -2503,6 +2505,14 @@ void backgroundTasks(void)
         interactiveShowData();
         Modes.interactive_last_update = mstime();
     }
+	
+	    if (Modes.uart) 
+	{
+        modesAcceptClients();
+        modesReadFromClients();
+        interactiveRemoveStaleAircrafts();
+    }
+	
 }
 
 int main(int argc, char **argv) 
