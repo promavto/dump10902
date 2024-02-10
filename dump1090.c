@@ -1576,12 +1576,18 @@ void useModesMessage(struct modesMessage *mm) {
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
         /* In non-interactive way, display messages on standard output. */
-        if (!Modes.interactive) {
+        if (!Modes.interactive) 
+        {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
         /* Send data to connected clients. */
-        if (Modes.net) {
+        if (Modes.net) 
+        {
+            modesSendRawOutput(mm);  /* Feed raw output clients. */
+        }
+        if (Modes.uart) // !! временно
+        {
             modesSendRawOutput(mm);  /* Feed raw output clients. */
         }
     }
@@ -2506,7 +2512,7 @@ void backgroundTasks(void)
         Modes.interactive_last_update = mstime();
     }
 	
-	    if (Modes.uart) 
+	if (Modes.uart) 
 	{
         modesAcceptClients();
         modesReadFromClients();
@@ -2523,7 +2529,8 @@ int main(int argc, char **argv)
     modesInitConfig();
 
     /* Анализ параметров командной строки */
-    for (j = 1; j < argc; j++) {
+    for (j = 1; j < argc; j++) 
+    {
         int more = j+1 < argc; /* There are more arguments. */
 
         if (!strcmp(argv[j],"--device-index") && more) 
@@ -2553,10 +2560,12 @@ int main(int argc, char **argv)
         } else if (!strcmp(argv[j],"--raw")) 
 		{
             Modes.raw = 1;
-        } else if (!strcmp(argv[j],"--net")) 
+        } 
+        else if (!strcmp(argv[j],"--net")) 
 		{
             Modes.net = 1;
-        } else if (!strcmp(argv[j],"--net-only")) 
+        } 
+        else if (!strcmp(argv[j],"--net-only")) 
 		{
             Modes.net = 1;
             Modes.net_only = 1;
@@ -2569,21 +2578,40 @@ int main(int argc, char **argv)
         } else if (!strcmp(argv[j],"--net-http-port") && more) 
 		{
             modesNetServices[MODES_NET_SERVICE_HTTP].port = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--net-sbs-port") && more) {
+        }
+        else if (!strcmp(argv[j],"--net-sbs-port") && more) 
+        {
             modesNetServices[MODES_NET_SERVICE_SBS].port = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--onlyaddr")) {
+        }
+        else if (!strcmp(argv[j], "--uart"))
+        {
+            Modes.net = 1;
+        }
+        else if (!strcmp(argv[j],"--onlyaddr")) 
+        {
             Modes.onlyaddr = 1;
-        } else if (!strcmp(argv[j],"--metric")) {
+        }
+        else if (!strcmp(argv[j],"--metric")) 
+        {
             Modes.metric = 1;
-        } else if (!strcmp(argv[j],"--aggressive")) {
+        } 
+        else if (!strcmp(argv[j],"--aggressive")) 
+        {
             Modes.aggressive++;
-        } else if (!strcmp(argv[j],"--interactive")) {
+        }
+        else if (!strcmp(argv[j],"--interactive")) 
+        {
             Modes.interactive = 1;
-        } else if (!strcmp(argv[j],"--interactive-rows")) {
+        }
+        else if (!strcmp(argv[j],"--interactive-rows")) 
+        {
             Modes.interactive_rows = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--interactive-ttl")) {
+        }
+        else if (!strcmp(argv[j],"--interactive-ttl")) 
+        {
             Modes.interactive_ttl = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--debug") && more) 
+        }
+        else if (!strcmp(argv[j],"--debug") && more) 
 		{
             char *f = argv[++j];
             while(*f) {
@@ -2602,18 +2630,22 @@ int main(int argc, char **argv)
                 }
                 f++;
             }
-        } else if (!strcmp(argv[j],"--stats")) 
+        }
+        else if (!strcmp(argv[j],"--stats")) 
 		{
             Modes.stats = 1;
-        } else if (!strcmp(argv[j],"--snip") && more) 
+        }
+        else if (!strcmp(argv[j],"--snip") && more) 
 		{
             snipMode(atoi(argv[++j]));
             exit(0);
-        } else if (!strcmp(argv[j],"--help")) 
+        }
+        else if (!strcmp(argv[j],"--help")) 
 		{
             showHelp();
             exit(0);
-        } else 
+        }
+        else 
 		{
             fprintf(stderr,
                 "Unknown or not enough arguments for option '%s'.\n\n",
@@ -2631,9 +2663,12 @@ int main(int argc, char **argv)
     if (Modes.net_only) 
 	{
         fprintf(stderr,"Net-only mode, no RTL device or file open.\n");
-    } else if (Modes.filename == NULL) {
+    }
+    else if (Modes.filename == NULL) 
+    {
         modesInitRTLSDR();
-    } else 
+    }
+    else 
 	{
         if (Modes.filename[0] == '-' && Modes.filename[1] == '\0') {
             Modes.fd = STDIN_FILENO;
@@ -2643,6 +2678,7 @@ int main(int argc, char **argv)
         }
     }
     if (Modes.net) modesInitNet();
+    if (Modes.uart) modesInitNet(); //!! пока net
 
      /* Если пользователь указывает --net-only, просто запустите для обслуживания сети
       * клиенты без чтения данных с устройства RTL. */
