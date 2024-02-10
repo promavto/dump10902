@@ -93,7 +93,7 @@
 
 #define MODES_NOTUSED(V) ((void) V)
 
-/* Structure used to describe a networking client. */
+/* Структура, используемая для описания сетевого клиента. */
 struct client {
     int fd;         /* File descriptor. */
     int service;    /* TCP port the client is connected to. */
@@ -1855,25 +1855,28 @@ void interactiveShowData(void) {
     }
 }
 
-/* When in interactive mode If we don't receive new nessages within
- * MODES_INTERACTIVE_TTL seconds we remove the aircraft from the list. */
-void interactiveRemoveStaleAircrafts(void) {
+/* В интерактивном режиме. Если мы не получаем новых сообщений в течение
+  *MODS_INTERACTIVE_TTL секунд удаляем самолет из списка. */
+void interactiveRemoveStaleAircrafts(void) 
+{
     struct aircraft *a = Modes.aircrafts;
     struct aircraft *prev = NULL;
     time_t now = time(NULL);
 
     while(a) {
-        if ((now - a->seen) > Modes.interactive_ttl) {
+        if ((now - a->seen) > Modes.interactive_ttl) 
+		{
             struct aircraft *next = a->next;
-            /* Remove the element from the linked list, with care
-             * if we are removing the first element. */
+              /* Осторожно удаляем элемент из связанного списка
+              * если мы удаляем первый элемент. */
             free(a);
             if (!prev)
                 Modes.aircrafts = next;
             else
                 prev->next = next;
             a = next;
-        } else {
+        } else 
+		{
             prev = a;
             a = a->next;
         }
@@ -1882,9 +1885,10 @@ void interactiveRemoveStaleAircrafts(void) {
 
 /* ============================== Snip mode ================================= */
 
-/* Get raw IQ samples and filter everything is < than the specified level
- * for more than 256 samples in order to reduce example file size. */
-void snipMode(int level) {
+  /* Получаем необработанные образцы IQ и фильтруем все, что < указанного уровня
+  * для более чем 256 образцов, чтобы уменьшить размер файла примера. */
+void snipMode(int level) 
+{
     int i, q;
     long long c = 0;
 
@@ -2480,20 +2484,20 @@ void showHelp(void) {
     );
 }
 
-/* This function is called a few times every second by main in order to
- * perform tasks we need to do continuously, like accepting new clients
- * from the net, refreshing the screen in interactive mode, and so forth. */
-void backgroundTasks(void) {
-    if (Modes.net) {
+/* Эта функция вызывается main несколько раз в секунду, чтобы
+  * выполнять задачи, которые нам необходимо выполнять постоянно, например, принимать новых клиентов
+  * из сети, обновление экрана в интерактивном режиме и т.д. */
+void backgroundTasks(void) 
+{
+    if (Modes.net) 
+	{
         modesAcceptClients();
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
     }
 
-    /* Refresh screen when in interactive mode. */
-    if (Modes.interactive &&
-        (mstime() - Modes.interactive_last_update) >
-        MODES_INTERACTIVE_REFRESH_TIME)
+    /* Обновить экран в интерактивном режиме. */
+    if (Modes.interactive && (mstime() - Modes.interactive_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
     {
         interactiveRemoveStaleAircrafts();
         interactiveShowData();
@@ -2501,44 +2505,59 @@ void backgroundTasks(void) {
     }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) 
+{
     int j;
 
     /* Set sane defaults. */
     modesInitConfig();
 
-    /* Parse the command line options */
+    /* Анализ параметров командной строки */
     for (j = 1; j < argc; j++) {
         int more = j+1 < argc; /* There are more arguments. */
 
-        if (!strcmp(argv[j],"--device-index") && more) {
+        if (!strcmp(argv[j],"--device-index") && more) 
+		{
             Modes.dev_index = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--gain") && more) {
+        } else if (!strcmp(argv[j],"--gain") && more) 
+		{
             Modes.gain = atof(argv[++j])*10; /* Gain is in tens of DBs */
-        } else if (!strcmp(argv[j],"--enable-agc")) {
+        } else if (!strcmp(argv[j],"--enable-agc")) 
+		{
             Modes.enable_agc++;
-        } else if (!strcmp(argv[j],"--freq") && more) {
+        } else if (!strcmp(argv[j],"--freq") && more) 
+		{
             Modes.freq = strtoll(argv[++j],NULL,10);
-        } else if (!strcmp(argv[j],"--ifile") && more) {
+        } else if (!strcmp(argv[j],"--ifile") && more) 
+		{
             Modes.filename = strdup(argv[++j]);
-        } else if (!strcmp(argv[j],"--loop")) {
+        } else if (!strcmp(argv[j],"--loop")) 
+		{
             Modes.loop = 1;
-        } else if (!strcmp(argv[j],"--no-fix")) {
+        } else if (!strcmp(argv[j],"--no-fix")) 
+		{
             Modes.fix_errors = 0;
-        } else if (!strcmp(argv[j],"--no-crc-check")) {
+        } else if (!strcmp(argv[j],"--no-crc-check")) 
+		{
             Modes.check_crc = 0;
-        } else if (!strcmp(argv[j],"--raw")) {
+        } else if (!strcmp(argv[j],"--raw")) 
+		{
             Modes.raw = 1;
-        } else if (!strcmp(argv[j],"--net")) {
+        } else if (!strcmp(argv[j],"--net")) 
+		{
             Modes.net = 1;
-        } else if (!strcmp(argv[j],"--net-only")) {
+        } else if (!strcmp(argv[j],"--net-only")) 
+		{
             Modes.net = 1;
             Modes.net_only = 1;
-        } else if (!strcmp(argv[j],"--net-ro-port") && more) {
+        } else if (!strcmp(argv[j],"--net-ro-port") && more) 
+		{
             modesNetServices[MODES_NET_SERVICE_RAWO].port = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--net-ri-port") && more) {
+        } else if (!strcmp(argv[j],"--net-ri-port") && more) 
+		{
             modesNetServices[MODES_NET_SERVICE_RAWI].port = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--net-http-port") && more) {
+        } else if (!strcmp(argv[j],"--net-http-port") && more) 
+		{
             modesNetServices[MODES_NET_SERVICE_HTTP].port = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--net-sbs-port") && more) {
             modesNetServices[MODES_NET_SERVICE_SBS].port = atoi(argv[++j]);
@@ -2554,7 +2573,8 @@ int main(int argc, char **argv) {
             Modes.interactive_rows = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--interactive-ttl")) {
             Modes.interactive_ttl = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--debug") && more) {
+        } else if (!strcmp(argv[j],"--debug") && more) 
+		{
             char *f = argv[++j];
             while(*f) {
                 switch(*f) {
@@ -2572,15 +2592,19 @@ int main(int argc, char **argv) {
                 }
                 f++;
             }
-        } else if (!strcmp(argv[j],"--stats")) {
+        } else if (!strcmp(argv[j],"--stats")) 
+		{
             Modes.stats = 1;
-        } else if (!strcmp(argv[j],"--snip") && more) {
+        } else if (!strcmp(argv[j],"--snip") && more) 
+		{
             snipMode(atoi(argv[++j]));
             exit(0);
-        } else if (!strcmp(argv[j],"--help")) {
+        } else if (!strcmp(argv[j],"--help")) 
+		{
             showHelp();
             exit(0);
-        } else {
+        } else 
+		{
             fprintf(stderr,
                 "Unknown or not enough arguments for option '%s'.\n\n",
                 argv[j]);
@@ -2594,11 +2618,13 @@ int main(int argc, char **argv) {
 
     /* Initialization */
     modesInit();
-    if (Modes.net_only) {
+    if (Modes.net_only) 
+	{
         fprintf(stderr,"Net-only mode, no RTL device or file open.\n");
     } else if (Modes.filename == NULL) {
         modesInitRTLSDR();
-    } else {
+    } else 
+	{
         if (Modes.filename[0] == '-' && Modes.filename[1] == '\0') {
             Modes.fd = STDIN_FILENO;
         } else if ((Modes.fd = open(Modes.filename,O_RDONLY)) == -1) {
@@ -2608,33 +2634,34 @@ int main(int argc, char **argv) {
     }
     if (Modes.net) modesInitNet();
 
-    /* If the user specifies --net-only, just run in order to serve network
-     * clients without reading data from the RTL device. */
-    while (Modes.net_only) {
+     /* Если пользователь указывает --net-only, просто запустите для обслуживания сети
+      * клиенты без чтения данных с устройства RTL. */
+    while (Modes.net_only) 
+	{
         backgroundTasks();
         modesWaitReadableClients(100);
     }
 
-    /* Create the thread that will read the data from the device. */
+    /* Создаем поток, который будет читать данные с устройства. */
     pthread_create(&Modes.reader_thread, NULL, readerThreadEntryPoint, NULL);
 
     pthread_mutex_lock(&Modes.data_mutex);
-    while(1) {
-        if (!Modes.data_ready) {
+    while(1) 
+	{
+        if (!Modes.data_ready) 
+		{
             pthread_cond_wait(&Modes.data_cond,&Modes.data_mutex);
             continue;
         }
         computeMagnitudeVector();
-
-        /* Signal to the other thread that we processed the available data
-         * and we want more (useful for --ifile). */
+          /* Сигнал другому потоку, что мы обработали доступные данные
+          * и нам нужно больше (полезно для --ifile). */
         Modes.data_ready = 0;
         pthread_cond_signal(&Modes.data_cond);
-
-        /* Process data after releasing the lock, so that the capturing
-         * thread can read data while we perform computationally expensive
-         * stuff * at the same time. (This should only be useful with very
-         * slow processors). */
+         /* Обработка данных после снятия блокировки, чтобы захват
+          * поток может читать данные, пока мы выполняем дорогостоящие вычисления
+          *штуки* одновременно. (Это должно быть полезно только при очень
+          * медленные процессоры). */
         pthread_mutex_unlock(&Modes.data_mutex);
         detectModeS(Modes.magnitude, Modes.data_len/2);
         backgroundTasks();
@@ -2642,8 +2669,9 @@ int main(int argc, char **argv) {
         if (Modes.exit) break;
     }
 
-    /* If --ifile and --stats were given, print statistics. */
-    if (Modes.stats && Modes.filename) {
+    /* Если были указаны --ifile и --stats, вывести статистику. */
+    if (Modes.stats && Modes.filename) 
+	{
         printf("%lld valid preambles\n", Modes.stat_valid_preamble);
         printf("%lld demodulated again after phase correction\n",
             Modes.stat_out_of_phase);
