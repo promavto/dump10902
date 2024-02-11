@@ -49,8 +49,8 @@
 #include "anet.h"
 
 
-#include <WiringPi.h>
-#include <WiringSerial.h>
+//#include <wiringPi.h>
+#include <wiringSerial.h>
 
 
 
