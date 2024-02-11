@@ -174,6 +174,8 @@ struct {
     /* Interactive mode */
     struct aircraft *aircrafts;
     long long interactive_last_update;  /* Last screen update in milliseconds */
+    long long uart_last_update;  /* Last uart update in milliseconds */
+
 
     /* Statistics */
     long long stat_valid_preamble;
@@ -1829,7 +1831,8 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
 }
 
 /* Show the currently captured interactive data on screen. */
-void interactiveShowData(void) {
+void interactiveShowData(void) 
+{
     struct aircraft *a = Modes.aircrafts;
     time_t now = time(NULL);
     char progress[4];
@@ -1862,6 +1865,49 @@ void interactiveShowData(void) {
         count++;
     }
 }
+
+
+/* Show the currently captured interactive data on screen. */
+void uartSendData(void)
+{
+    struct aircraft* a = Modes.aircrafts;
+    time_t now = time(NULL);
+    char progress[4];
+    int count = 0;
+
+    memset(progress, ' ', 3);
+    progress[time(NULL) % 3] = '.';
+    progress[3] = '\0';
+
+    printf("\x1b[H\x1b[2J");    /* Clear the screen */
+    printf(
+        "Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
+        "--------------------------------------------------------------------------------\n",
+        progress);
+
+    while (a && count < Modes.interactive_rows) 
+    {
+        int altitude = a->altitude, speed = a->speed;
+
+        /* Convert units to metric if --metric was specified. */
+        if (Modes.metric) 
+        {
+            altitude /= 3.2828;
+            speed *= 1.852;
+        }
+
+        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+            a->hexaddr, a->flight, altitude, speed,
+            a->lat, a->lon, a->track, a->messages,
+            (int)(now - a->seen));
+        a = a->next;
+        count++;
+    }
+}
+
+
+
+
 
 /* В интерактивном режиме. Если мы не получаем новых сообщений в течение
   *MODS_INTERACTIVE_TTL секунд удаляем самолет из списка. */
@@ -2512,11 +2558,11 @@ void backgroundTasks(void)
         Modes.interactive_last_update = mstime();
     }
 	
-	if (Modes.uart) 
+	if (Modes.uart && (mstime() - Modes.uart_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
 	{
-        modesAcceptClients();
-        modesReadFromClients();
         interactiveRemoveStaleAircrafts();
+        uartSendData();
+        Modes.uart_last_update = mstime();
     }
 	
 }
