@@ -167,7 +167,7 @@ struct {
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
     int uart;                       /* UART mode */
     int uart_rows;                  /* UART mode: max number of rows. */
-    int uart_ttl;                   /* Interactive mode: TTL before deletion. */
+    int uart_ttl;                   /* UART mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -283,6 +283,7 @@ void modesInitConfig(void) {
     Modes.uart_ttl = MODES_INTERACTIVE_TTL;
     Modes.aggressive = 0;
     Modes.interactive_rows = getTermRows();
+    Modes.uart_rows = getTermRows();
     Modes.loop = 0;
 }
 
@@ -445,7 +446,7 @@ void readDataFromFile(void) {
 
         if (Modes.uart) 
         {
-            /* Когда --ifile и --interactive используются вместе, замедляется
+            /* Когда --ifile и --uart используются вместе, замедляется
             * игра по естественной ставке полученного RTLSDR. */
             pthread_mutex_unlock(&Modes.data_mutex);
             usleep(5000);
@@ -1599,7 +1600,7 @@ void useModesMessage(struct modesMessage *mm)
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Подача выходных клиентов SBS. */
         }
         /* Неинтерактивным способом отображаем сообщения на стандартном выводе. */
-        if (!Modes.interactive) 
+        if (!Modes.interactive || !Modes.uart)
         {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
