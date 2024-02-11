@@ -1899,8 +1899,8 @@ void uartSendData(void)
     progress[time(NULL) % 3] = '.';
     progress[3] = '\0';
   
-    sprintf("","\x1b[H\x1b[2J");    /* Clear the screen */
-    sprintf("","Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
+    printf("\x1b[H\x1b[2J");    /* Clear the screen */
+    printf("Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
         "--------------------------------------------------------------------------------\n", progress);
 
     while (a && count < Modes.uart_rows) 
@@ -1914,7 +1914,7 @@ void uartSendData(void)
             speed *= 1.852;
         }
 
-        sprintf("","%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
