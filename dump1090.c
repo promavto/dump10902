@@ -164,14 +164,15 @@ struct {
     int net_only;                   /* Enable just networking. */
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
-    int uart_rows;                  /* uart mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
+    int uart;                       /* Enable uart. */
+    int uart_rows;                  /* uart mode: max number of rows. */
+    int uart_ttl;                   /* uart mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
     int aggressive;                 /* Aggressive detection algorithm. */
-    int uart;                       /* Enable uart. */
-
+ 
     /* Interactive mode */
     struct aircraft *aircrafts;
     long long interactive_last_update;  /* Last screen update in milliseconds */
@@ -237,6 +238,7 @@ struct modesMessage {
 };
 
 void interactiveShowData(void);
+void uartSendData(void);
 struct aircraft* interactiveReceiveData(struct modesMessage *mm);
 void modesSendRawOutput(struct modesMessage *mm);
 void modesSendSBSOutput(struct modesMessage *mm, struct aircraft *a);
