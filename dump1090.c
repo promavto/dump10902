@@ -353,22 +353,7 @@ void modesInit(void) {
     Modes.stat_sbs_connections = 0;
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
-    /*================ UART =====================*/
-    int serial_port;
-    char dat;
-    if ((serial_port = serialOpen("/dev/ttyAMA0", 9600)) < 0)	/* open serial port */
-    {
-        fprintf(stderr, "Unable to open serial device: %s\n", strerror(errno));
-        return 1;
-    }
-
-    if (wiringPiSetup() == -1)					/* initializes wiringPi setup */
-    {
-        fprintf(stdout, "Unable to start wiringPi: %s\n", strerror(errno));
-        return 1;
-    }
-
-
+  
 }
 
 /* =============================== RTLSDR handling ========================== */
