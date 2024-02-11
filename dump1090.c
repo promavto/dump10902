@@ -1914,6 +1914,10 @@ void uartSendData(void)
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
+        echo a->hexaddr > / dev / ttyAMA0;
+        echo " " > / dev / ttyAMA0;
+        echo a->flight > / dev / ttyAMA0;
+        echo "\n" > / dev / ttyAMA0;
         a = a->next;
         count++;
     }
