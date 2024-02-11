@@ -49,11 +49,6 @@
 #include "anet.h"
 
 
-//#include <wiringPi.h>
-//#include <wiringSerial.h>
-
-
-
 #define MODES_DEFAULT_RATE         2000000
 #define MODES_DEFAULT_FREQ         1090000000
 #define MODES_DEFAULT_WIDTH        1000
