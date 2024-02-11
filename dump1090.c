@@ -395,20 +395,20 @@ void modesInit(void) {
     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
     write(serial_port, "Hello, world!", sizeof(msg));
 
-    char read_buf[256];
+    //char read_buf[256];
 
-    memset(&read_buf, '\0', sizeof(read_buf);
+    //memset(&read_buf, '\0', sizeof(read_buf);
 
-    int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
+    //int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
 
-    if (num_bytes < 0) {
-        printf("Error reading: %s", strerror(errno));
-       // return 1;
-    }
+    //if (num_bytes < 0) {
+    //    printf("Error reading: %s", strerror(errno));
+    //   // return 1;
+    //}
 
-    printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
+    //printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
 
-    close(serial_port)
+    //close(serial_port)
       //  return 0;
 
 }
