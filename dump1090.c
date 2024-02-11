@@ -1980,6 +1980,10 @@ void uartSendData(void)
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
+
+       // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+
         //echo a->hexaddr > / dev / ttyAMA0;
         //echo " " > / dev / ttyAMA0;
         //echo a->flight > / dev / ttyAMA0;
