@@ -164,6 +164,7 @@ struct {
     int net_only;                   /* Enable just networking. */
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
+    int uart_rows;                  /* uart mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
@@ -280,6 +281,9 @@ void modesInitConfig(void) {
     Modes.interactive_rows = getTermRows();
     Modes.loop = 0;
     Modes.uart = 0;
+    Modes.uart_rows = MODES_INTERACTIVE_ROWS;
+    Modes.uart_ttl = MODES_INTERACTIVE_TTL;
+    Modes.uart_rows = getTermRows();
 }
 
 void modesInit(void) 
@@ -1888,7 +1892,7 @@ void uartSendData(void)
         "--------------------------------------------------------------------------------\n",
         progress);
 
-    while (a && count < Modes.interactive_rows) 
+    while (a && count < Modes.uart_rows) 
     {
         int altitude = a->altitude, speed = a->speed;
 
@@ -2486,11 +2490,13 @@ void modesWaitReadableClients(int timeout_ms) {
 
 /* ============================ Terminal handling  ========================== */
 
-/* Handle resizing terminal. */
+/* Обработка терминала изменения размера. */
 void sigWinchCallback() {
     signal(SIGWINCH, SIG_IGN);
     Modes.interactive_rows = getTermRows();
-    interactiveShowData();
+    Modes.uart_rows = getTermRows();
+   /* interactiveShowData();*/
+    uartSendData();
     signal(SIGWINCH, sigWinchCallback);
 }
 
@@ -2514,6 +2520,9 @@ void showHelp(void) {
 "--interactive            Interactive mode refreshing data on screen.\n"
 "--interactive-rows <num> Max number of rows in interactive mode (default: 15).\n"
 "--interactive-ttl <sec>  Remove from list if idle for <sec> (default: 60).\n"
+"--uart                   UART mode refreshing data on screen.\n"
+"--uart-rows <num>        Max number of rows in UART mode (default: 15).\n"
+"--uart-ttl <sec>         Remove from list if idle for <sec> (default: 60).\n"
 "--raw                    Show only messages hex values.\n"
 "--net                    Enable networking.\n"
 "--net-only               Enable just networking, no RTL device or file used.\n"
@@ -2632,10 +2641,6 @@ int main(int argc, char **argv)
         {
             modesNetServices[MODES_NET_SERVICE_SBS].port = atoi(argv[++j]);
         }
-        else if (!strcmp(argv[j], "--uart"))
-        {
-            Modes.uart = 1;
-        }
         else if (!strcmp(argv[j],"--onlyaddr")) 
         {
             Modes.onlyaddr = 1;
@@ -2659,6 +2664,18 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[j],"--interactive-ttl")) 
         {
             Modes.interactive_ttl = atoi(argv[++j]);
+        }
+        else if (!strcmp(argv[j], "--uart"))
+        {
+            Modes.uart = 1;
+        }
+        else if (!strcmp(argv[j], "--uart-rows"))
+        {
+            Modes.uart_rows = atoi(argv[++j]);
+        }
+        else if (!strcmp(argv[j], "--uart-ttl"))
+        {
+            Modes.uart_ttl = atoi(argv[++j]);
         }
         else if (!strcmp(argv[j],"--debug") && more) 
 		{
