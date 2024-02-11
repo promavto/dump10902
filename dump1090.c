@@ -2677,15 +2677,15 @@ int main(int argc, char **argv) {
         {
             Modes.interactive_ttl = atoi(argv[++j]);
         }
-        else if (!strcmp(argv[j], "--interactive"))
+        else if (!strcmp(argv[j], "--uart"))
         {
             Modes.uart = 1;
         }
-        else if (!strcmp(argv[j], "--interactive-rows"))
+        else if (!strcmp(argv[j], "--uart-rows"))
         {
             Modes.uart_rows = atoi(argv[++j]);
         }
-        else if (!strcmp(argv[j], "--interactive-ttl"))
+        else if (!strcmp(argv[j], "--uart-ttl"))
         {
             Modes.uart_ttl = atoi(argv[++j]);
         }
