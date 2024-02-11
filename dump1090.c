@@ -357,9 +357,10 @@ void modesInit(void) {
 
     struct termios tty;
 
-    if (tcgetattr(serial_port, &tty) != 0) {
+    if (tcgetattr(serial_port, &tty) != 0) 
+    {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-        return 1;
+       // return 1;
     }
 
     tty.c_cflag &= ~PARENB;
@@ -388,7 +389,7 @@ void modesInit(void) {
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        return 1;
+      //  return 1;
     }
 
     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
@@ -402,13 +403,13 @@ void modesInit(void) {
 
     if (num_bytes < 0) {
         printf("Error reading: %s", strerror(errno));
-        return 1;
+       // return 1;
     }
 
     printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
 
     close(serial_port)
-        return 0;
+      //  return 0;
 
 }
 
