@@ -28,6 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -45,6 +47,12 @@
 #include <sys/select.h>
 #include "rtl-sdr.h"
 #include "anet.h"
+
+
+#include <wiringPi.h>
+#include <wiringSerial.h>
+
+
 
 #define MODES_DEFAULT_RATE         2000000
 #define MODES_DEFAULT_FREQ         1090000000
@@ -345,6 +353,22 @@ void modesInit(void) {
     Modes.stat_sbs_connections = 0;
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
+    /*================ UART =====================*/
+    int serial_port;
+    char dat;
+    if ((serial_port = serialOpen("/dev/ttyAMA0", 9600)) < 0)	/* open serial port */
+    {
+        fprintf(stderr, "Unable to open serial device: %s\n", strerror(errno));
+        return 1;
+    }
+
+    if (wiringPiSetup() == -1)					/* initializes wiringPi setup */
+    {
+        fprintf(stdout, "Unable to start wiringPi: %s\n", strerror(errno));
+        return 1;
+    }
+
+
 }
 
 /* =============================== RTLSDR handling ========================== */
