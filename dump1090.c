@@ -282,7 +282,8 @@ void modesInitConfig(void) {
     Modes.uart = 0;
 }
 
-void modesInit(void) {
+void modesInit(void) 
+{
     int i, q;
 
     pthread_mutex_init(&Modes.data_mutex,NULL);
@@ -300,6 +301,7 @@ void modesInit(void) {
     memset(Modes.icao_cache,0,sizeof(uint32_t)*MODES_ICAO_CACHE_LEN*2);
     Modes.aircrafts = NULL;
     Modes.interactive_last_update = 0;
+    Modes.uart_last_update = 0;
     if ((Modes.data = malloc(Modes.data_len)) == NULL ||
         (Modes.magnitude = malloc(Modes.data_len*2)) == NULL) {
         fprintf(stderr, "Out of memory allocating data buffer.\n");
@@ -1590,7 +1592,8 @@ void useModesMessage(struct modesMessage *mm) {
         }
         if (Modes.uart) // !! временно
         {
-            modesSendRawOutput(mm);  /* Feed raw output clients. */
+            displayModesMessage(mm);
+            if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
     }
 }
@@ -2631,7 +2634,7 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[j], "--uart"))
         {
-            Modes.net = 1;
+            Modes.uart = 1;
         }
         else if (!strcmp(argv[j],"--onlyaddr")) 
         {
@@ -2703,7 +2706,7 @@ int main(int argc, char **argv)
 
     /* Setup for SIGWINCH for handling lines */
     if (Modes.interactive == 1) signal(SIGWINCH, sigWinchCallback);
-
+    if (Modes.uart == 1) signal(SIGWINCH, sigWinchCallback);
     /* Initialization */
     modesInit();
     if (Modes.net_only) 
@@ -2724,8 +2727,7 @@ int main(int argc, char **argv)
         }
     }
     if (Modes.net) modesInitNet();
-    if (Modes.uart) modesInitNet(); //!! пока net
-
+ 
      /* Если пользователь указывает --net-only, просто запустите для обслуживания сети
       * клиенты без чтения данных с устройства RTL. */
     while (Modes.net_only) 
