@@ -1883,7 +1883,8 @@ void interactiveShowData(void) {
 }
 
 /* Показать текущие захваченные интерактивные данные на экране. */
-void uartSendData(void) {
+void uartSendData(void) 
+{
     struct aircraft* a = Modes.aircrafts;
     time_t now = time(NULL);
     char progress[4];
@@ -1894,10 +1895,8 @@ void uartSendData(void) {
     progress[3] = '\0';
 
     printf("\x1b[H\x1b[2J");    /* Clear the screen */
-    printf(
-        "Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
-        "--------------------------------------------------------------------------------\n",
-        progress);
+    printf("Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
+        "--------------------------------------------------------------------------------\n", progress);
 
     while (a && count < Modes.uart_rows) 
     {
@@ -1925,25 +1924,30 @@ void uartSendData(void) {
 
 
 
-/* When in interactive mode If we don't receive new nessages within
- * MODES_INTERACTIVE_TTL seconds we remove the aircraft from the list. */
-void interactiveRemoveStaleAircrafts(void) {
+/* В интерактивном режиме. Если мы не получаем новых сообщений в течение
+  *MODS_INTERACTIVE_TTL секунд удаляем самолет из списка. */
+void interactiveRemoveStaleAircrafts(void) 
+{
     struct aircraft *a = Modes.aircrafts;
     struct aircraft *prev = NULL;
     time_t now = time(NULL);
 
-    while(a) {
-        if ((now - a->seen) > Modes.interactive_ttl) {
+    while(a) 
+    {
+        if ((now - a->seen) > Modes.interactive_ttl || (now - a->seen) > Modes.uart_ttl)
+        {
             struct aircraft *next = a->next;
-            /* Remove the element from the linked list, with care
-             * if we are removing the first element. */
+            /* Осторожно удаляем элемент из связанного списка
+             * если мы удаляем первый элемент. */
             free(a);
             if (!prev)
                 Modes.aircrafts = next;
             else
                 prev->next = next;
             a = next;
-        } else {
+        }
+        else 
+        {
             prev = a;
             a = a->next;
         }
@@ -2496,7 +2500,8 @@ void modesWaitReadableClients(int timeout_ms) {
 /* ============================ Terminal handling  ========================== */
 
 /* Handle resizing terminal. */
-void sigWinchCallback() {
+void sigWinchCallback() 
+{
     signal(SIGWINCH, SIG_IGN);
     Modes.interactive_rows = getTermRows();
     interactiveShowData();
