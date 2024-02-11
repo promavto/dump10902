@@ -46,33 +46,6 @@
 #include "rtl-sdr.h"
 #include "anet.h"
 
-
-import socket, sys, argparse
-from time import sleep
-try :
-    import serial
-    except ImportError :
-sys.exit(">> Pyserial not installed, please install via >> apt install python-serial")
-
-# Parse command line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("--host", type = str, help = "dump1090 IP address default: localhost", default = 'localhost')
-parser.add_argument("--tcp", type = int, help = "TCP port to connect to default: 30003 (SBS-1)", default = 30003)
-parser.add_argument("--port", type = str, help = "Serial Port to use default: /dev/serial0", default = "/dev/serial0")
-parser.add_argument("--baud", type = int, help = "Serial Baudrate default: 115200", default = 115200)
-parser.add_argument("--delayed", type = str, help = "Delay start in seconds (Cron use) default: None (0)", default = 0)
-args = parser.parse_args()
-
-# Wait for network services to start
-sleep(args.delayed)
-
-# Setup serial portand TCP connection
-ser = serial.Serial(args.port, baudrate = args.baud)
-dump1090 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-dump1090.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-dump1090.connect((args.host, args.tcp))
-
-
 #define MODES_DEFAULT_RATE         2000000
 #define MODES_DEFAULT_FREQ         1090000000
 #define MODES_DEFAULT_WIDTH        1000
