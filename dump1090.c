@@ -1913,11 +1913,11 @@ void uartSendData(void)
         printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
-            (int)(now - a->seen));
-        echo a->hexaddr > / dev / ttyAMA0;
-        echo " " > / dev / ttyAMA0;
-        echo a->flight > / dev / ttyAMA0;
-        echo "\n" > / dev / ttyAMA0;
+            (int)(now - a->seen)) > / dev / ttyAMA0;
+        //echo a->hexaddr > / dev / ttyAMA0;
+        //echo " " > / dev / ttyAMA0;
+        //echo a->flight > / dev / ttyAMA0;
+        //echo "\n" > / dev / ttyAMA0;
         a = a->next;
         count++;
     }
