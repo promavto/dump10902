@@ -382,12 +382,14 @@ void modesInit(void) {
     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
     write(serial_port, msg, sizeof(msg));
 
-    fflush(stdout);
+    //fflush(stdout);
+    unsigned char msg1[32];
+    fprintf(msg1, "Hello world.\n");
+    write(serial_port, msg1, sizeof(msg1));
 
-   // fprintf(serial_port, "Hello world.\n");
-    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    printf("Hello World2.");
-    fflush(stdout);
+    //printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+    //printf("Hello World2.");
+    //fflush(stdout);
 
 
 }
