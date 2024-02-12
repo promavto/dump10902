@@ -1944,8 +1944,8 @@ void uartShowData(void)
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     }
 
- /*    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\n' };
-     write(serial_port, msg, sizeof(msg));*/
+     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\n' };
+     write(serial_port, msg, sizeof(msg));
 
 
 
