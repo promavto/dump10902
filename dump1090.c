@@ -1935,9 +1935,8 @@ void interactiveShowData(void)
             (int)(now - a->seen));
 
         write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+        write(serial_port, "/", sizeof("/"));
         write(serial_port, a->flight, sizeof(a->flight));
-
-
 
         a = a->next;
         count++;
