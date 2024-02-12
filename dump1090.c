@@ -28,8 +28,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -47,10 +45,6 @@
 #include <sys/select.h>
 #include "rtl-sdr.h"
 #include "anet.h"
-
-#include <termios.h>
-
-
 
 #define MODES_DEFAULT_RATE         2000000
 #define MODES_DEFAULT_FREQ         1090000000
@@ -128,7 +122,7 @@ struct aircraft {
     struct aircraft *next; /* Next aircraft in our linked list. */
 };
 
-/* Глобальное состояние программы. */
+/* Program global state. */
 struct {
     /* Internal state */
     pthread_t reader_thread;
@@ -171,9 +165,6 @@ struct {
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
-    int uart;                       /* UART mode */
-    int uart_rows;                  /* UART mode: max number of rows. */
-    int uart_ttl;                   /* UART mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -182,7 +173,6 @@ struct {
     /* Interactive mode */
     struct aircraft *aircrafts;
     long long interactive_last_update;  /* Last screen update in milliseconds */
-    long long uart_last_update;  /* Last screen update in milliseconds */
 
     /* Statistics */
     long long stat_valid_preamble;
@@ -243,7 +233,6 @@ struct modesMessage {
 };
 
 void interactiveShowData(void);
-void uartSendData(void);
 struct aircraft* interactiveReceiveData(struct modesMessage *mm);
 void modesSendRawOutput(struct modesMessage *mm);
 void modesSendSBSOutput(struct modesMessage *mm, struct aircraft *a);
@@ -284,12 +273,8 @@ void modesInitConfig(void) {
     Modes.interactive = 0;
     Modes.interactive_rows = MODES_INTERACTIVE_ROWS;
     Modes.interactive_ttl = MODES_INTERACTIVE_TTL;
-    Modes.uart = 0;
-    Modes.uart_rows = MODES_INTERACTIVE_ROWS;
-    Modes.uart_ttl = MODES_INTERACTIVE_TTL;
     Modes.aggressive = 0;
     Modes.interactive_rows = getTermRows();
-    Modes.uart_rows = getTermRows();
     Modes.loop = 0;
 }
 
@@ -311,7 +296,6 @@ void modesInit(void) {
     memset(Modes.icao_cache,0,sizeof(uint32_t)*MODES_ICAO_CACHE_LEN*2);
     Modes.aircrafts = NULL;
     Modes.interactive_last_update = 0;
-    Modes.uart_last_update = 0;
     if ((Modes.data = malloc(Modes.data_len)) == NULL ||
         (Modes.magnitude = malloc(Modes.data_len*2)) == NULL) {
         fprintf(stderr, "Out of memory allocating data buffer.\n");
@@ -351,66 +335,6 @@ void modesInit(void) {
     Modes.stat_sbs_connections = 0;
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
-  /*=======================================================================*/
-
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-
-    struct termios tty;
-
-    if (tcgetattr(serial_port, &tty) != 0) 
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-       // return 1;
-    }
-
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-      //  return 1;
-    }
-
-    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, "Hello, world!", sizeof(msg));
-
-    //char read_buf[256];
-
-    //memset(&read_buf, '\0', sizeof(read_buf);
-
-    //int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));
-
-    //if (num_bytes < 0) {
-    //    printf("Error reading: %s", strerror(errno));
-    //   // return 1;
-    //}
-
-    //printf("Read %i bytes. Received message: %s", num_bytes, read_buf);
-
-    //close(serial_port)
-      //  return 0;
-
 }
 
 /* =============================== RTLSDR handling ========================== */
@@ -505,15 +429,6 @@ void readDataFromFile(void) {
         if (Modes.interactive) {
             /* When --ifile and --interactive are used together, slow down
              * playing at the natural rate of the RTLSDR received. */
-            pthread_mutex_unlock(&Modes.data_mutex);
-            usleep(5000);
-            pthread_mutex_lock(&Modes.data_mutex);
-        }
-
-        if (Modes.uart) 
-        {
-            /* Когда --ifile и --uart используются вместе, замедляется
-            * игра по естественной ставке полученного RTLSDR. */
             pthread_mutex_unlock(&Modes.data_mutex);
             usleep(5000);
             pthread_mutex_lock(&Modes.data_mutex);
@@ -1643,37 +1558,28 @@ good_preamble:
     }
 }
 
- /* Когда доступно новое сообщение, поскольку оно было декодировано из
-  * RTL-устройство, файл или полученный во входном порту TCP или любой другой
-  * способ получения расшифрованного сообщения мы вызываем эту функцию по порядку
-  * использовать сообщение.
-  *
-  * По сути, эта функция передает необработанное сообщение на верхние уровни для
-  * дальнейшая обработка и визуализация. */
-void useModesMessage(struct modesMessage *mm) 
-{
-    if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) 
-    {
-        /* Отслеживать самолеты в интерактивном режиме или если HTTP интерфейс включен. */
-        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) 
-        {
+/* When a new message is available, because it was decoded from the
+ * RTL device, file, or received in the TCP input port, or any other
+ * way we can receive a decoded message, we call this function in order
+ * to use the message.
+ *
+ * Basically this function passes a raw message to the upper layers for
+ * further processing and visualization. */
+void useModesMessage(struct modesMessage *mm) {
+    if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) {
+        /* Track aircrafts in interactive mode or if the HTTP
+         * interface is enabled. */
+        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) {
             struct aircraft *a = interactiveReceiveData(mm);
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
-        if (Modes.uart || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0)
-        {
-            struct aircraft* a = interactiveReceiveData(mm);
-            if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Подача выходных клиентов SBS. */
-        }
-        /* Неинтерактивным способом отображаем сообщения на стандартном выводе. */
-        if (!Modes.interactive || !Modes.uart)
-        {
+        /* In non-interactive way, display messages on standard output. */
+        if (!Modes.interactive) {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
-        /* Отправляем данные подключенным клиентам. */
-        if (Modes.net) 
-        {
+        /* Send data to connected clients. */
+        if (Modes.net) {
             modesSendRawOutput(mm);  /* Feed raw output clients. */
         }
     }
@@ -1914,7 +1820,7 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     return a;
 }
 
-/* Показать текущие захваченные интерактивные данные на экране. */
+/* Show the currently captured interactive data on screen. */
 void interactiveShowData(void) {
     struct aircraft *a = Modes.aircrafts;
     time_t now = time(NULL);
@@ -1949,122 +1855,25 @@ void interactiveShowData(void) {
     }
 }
 
-/* Показать текущие захваченные интерактивные данные на экране. */
-void uartSendData(void) 
-{
-    struct aircraft* a = Modes.aircrafts;
-    time_t now = time(NULL);
-    char progress[4];
-    int count = 0;
-
-
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-
-    struct termios tty;
-
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-        // return 1;
-    }
-
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        //  return 1;
-    }
-
-
-
-    memset(progress, ' ', 3);
-    progress[time(NULL) % 3] = '.';
-    progress[3] = '\0';
-  
-    printf("\x1b[H\x1b[2J");    /* Clear the screen */
-    printf("Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
-        "--------------------------------------------------------------------------------\n", progress);
-
-    while (a && count < Modes.uart_rows) 
-    {
-        int altitude = a->altitude, speed = a->speed;
-
-        /* Convert units to metric if --metric was specified. */
-        if (Modes.metric) 
-        {
-            altitude /= 3.2828;
-            speed *= 1.852;
-        }
-
-        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-            a->hexaddr, a->flight, altitude, speed,
-            a->lat, a->lon, a->track, a->messages,
-            (int)(now - a->seen));
-
-       // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-
-        //echo a->hexaddr > / dev / ttyAMA0;
-        //echo " " > / dev / ttyAMA0;
-        //echo a->flight > / dev / ttyAMA0;
-        //echo "\n" > / dev / ttyAMA0;
-        a = a->next;
-        count++;
-    }
-}
-
-
-
-
-
-
-
-/* В интерактивном режиме. Если мы не получаем новых сообщений в течение
-  *MODS_INTERACTIVE_TTL секунд удаляем самолет из списка. */
-void interactiveRemoveStaleAircrafts(void) 
-{
+/* When in interactive mode If we don't receive new nessages within
+ * MODES_INTERACTIVE_TTL seconds we remove the aircraft from the list. */
+void interactiveRemoveStaleAircrafts(void) {
     struct aircraft *a = Modes.aircrafts;
     struct aircraft *prev = NULL;
     time_t now = time(NULL);
 
-    while(a) 
-    {
-        if ((now - a->seen) > Modes.interactive_ttl || (now - a->seen) > Modes.uart_ttl)
-        {
+    while(a) {
+        if ((now - a->seen) > Modes.interactive_ttl) {
             struct aircraft *next = a->next;
-            /* Осторожно удаляем элемент из связанного списка
-             * если мы удаляем первый элемент. */
+            /* Remove the element from the linked list, with care
+             * if we are removing the first element. */
             free(a);
             if (!prev)
                 Modes.aircrafts = next;
             else
                 prev->next = next;
             a = next;
-        }
-        else 
-        {
+        } else {
             prev = a;
             a = a->next;
         }
@@ -2617,13 +2426,10 @@ void modesWaitReadableClients(int timeout_ms) {
 /* ============================ Terminal handling  ========================== */
 
 /* Handle resizing terminal. */
-void sigWinchCallback() 
-{
+void sigWinchCallback() {
     signal(SIGWINCH, SIG_IGN);
     Modes.interactive_rows = getTermRows();
     interactiveShowData();
-    Modes.uart_rows = getTermRows();
-    uartSendData();
     signal(SIGWINCH, sigWinchCallback);
 }
 
@@ -2647,9 +2453,6 @@ void showHelp(void) {
 "--interactive            Interactive mode refreshing data on screen.\n"
 "--interactive-rows <num> Max number of rows in interactive mode (default: 15).\n"
 "--interactive-ttl <sec>  Remove from list if idle for <sec> (default: 60).\n"
-"--uart                   UART mode refreshing data on screen.\n"
-"--uart-rows <num>        Max number of rows in UART mode (default: 15).\n"
-"--uart-ttl <sec>         Remove from list if idle for <sec> (default: 60).\n"
 "--raw                    Show only messages hex values.\n"
 "--net                    Enable networking.\n"
 "--net-only               Enable just networking, no RTL device or file used.\n"
@@ -2677,30 +2480,24 @@ void showHelp(void) {
     );
 }
 
- /* Эта функция вызывается main несколько раз в секунду, чтобы
-  * выполнять задачи, которые нам необходимо выполнять постоянно, например, принимать новых клиентов
-  * из сети, обновление экрана в интерактивном режиме и т.д. */
-void backgroundTasks(void) 
-{
+/* This function is called a few times every second by main in order to
+ * perform tasks we need to do continuously, like accepting new clients
+ * from the net, refreshing the screen in interactive mode, and so forth. */
+void backgroundTasks(void) {
     if (Modes.net) {
         modesAcceptClients();
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
     }
 
-    /* Обновить экран в интерактивном режиме. */
-    if (Modes.interactive && (mstime() - Modes.interactive_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
+    /* Refresh screen when in interactive mode. */
+    if (Modes.interactive &&
+        (mstime() - Modes.interactive_last_update) >
+        MODES_INTERACTIVE_REFRESH_TIME)
     {
         interactiveRemoveStaleAircrafts();
         interactiveShowData();
         Modes.interactive_last_update = mstime();
-    }
-
-    if (Modes.uart && (mstime() - Modes.uart_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
-    {
-        interactiveRemoveStaleAircrafts();
-        uartSendData();
-        Modes.uart_last_update = mstime();
     }
 }
 
@@ -2714,105 +2511,50 @@ int main(int argc, char **argv) {
     for (j = 1; j < argc; j++) {
         int more = j+1 < argc; /* There are more arguments. */
 
-        if (!strcmp(argv[j],"--device-index") && more) 
-        {
+        if (!strcmp(argv[j],"--device-index") && more) {
             Modes.dev_index = atoi(argv[++j]);
-        } 
-        else if (!strcmp(argv[j],"--gain") && more) 
-        {
+        } else if (!strcmp(argv[j],"--gain") && more) {
             Modes.gain = atof(argv[++j])*10; /* Gain is in tens of DBs */
-        }
-        else if (!strcmp(argv[j],"--enable-agc")) 
-        {
+        } else if (!strcmp(argv[j],"--enable-agc")) {
             Modes.enable_agc++;
-        }
-        else if (!strcmp(argv[j],"--freq") && more) 
-        {
+        } else if (!strcmp(argv[j],"--freq") && more) {
             Modes.freq = strtoll(argv[++j],NULL,10);
-        }
-        else if (!strcmp(argv[j],"--ifile") && more) 
-        {
+        } else if (!strcmp(argv[j],"--ifile") && more) {
             Modes.filename = strdup(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--loop")) 
-        {
+        } else if (!strcmp(argv[j],"--loop")) {
             Modes.loop = 1;
-        }
-        else if (!strcmp(argv[j],"--no-fix")) 
-        {
+        } else if (!strcmp(argv[j],"--no-fix")) {
             Modes.fix_errors = 0;
-        }
-        else if (!strcmp(argv[j],"--no-crc-check")) 
-        {
+        } else if (!strcmp(argv[j],"--no-crc-check")) {
             Modes.check_crc = 0;
-        } 
-        else if (!strcmp(argv[j],"--raw"))
-        {
+        } else if (!strcmp(argv[j],"--raw")) {
             Modes.raw = 1;
-        }
-        else if (!strcmp(argv[j],"--net")) 
-        {
+        } else if (!strcmp(argv[j],"--net")) {
             Modes.net = 1;
-        }
-        else if (!strcmp(argv[j],"--net-only")) 
-        {
+        } else if (!strcmp(argv[j],"--net-only")) {
             Modes.net = 1;
             Modes.net_only = 1;
-        }
-        else if (!strcmp(argv[j],"--net-ro-port") && more) 
-        {
+        } else if (!strcmp(argv[j],"--net-ro-port") && more) {
             modesNetServices[MODES_NET_SERVICE_RAWO].port = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--net-ri-port") && more) 
-        {
+        } else if (!strcmp(argv[j],"--net-ri-port") && more) {
             modesNetServices[MODES_NET_SERVICE_RAWI].port = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--net-http-port") && more) 
-        {
+        } else if (!strcmp(argv[j],"--net-http-port") && more) {
             modesNetServices[MODES_NET_SERVICE_HTTP].port = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--net-sbs-port") && more) 
-        {
+        } else if (!strcmp(argv[j],"--net-sbs-port") && more) {
             modesNetServices[MODES_NET_SERVICE_SBS].port = atoi(argv[++j]);
-        } 
-        else if (!strcmp(argv[j],"--onlyaddr")) 
-        {
+        } else if (!strcmp(argv[j],"--onlyaddr")) {
             Modes.onlyaddr = 1;
-        }
-        else if (!strcmp(argv[j],"--metric")) 
-        {
+        } else if (!strcmp(argv[j],"--metric")) {
             Modes.metric = 1;
-        }
-        else if (!strcmp(argv[j],"--aggressive")) 
-        {
+        } else if (!strcmp(argv[j],"--aggressive")) {
             Modes.aggressive++;
-        }
-        else if (!strcmp(argv[j],"--interactive")) 
-        {
+        } else if (!strcmp(argv[j],"--interactive")) {
             Modes.interactive = 1;
-        }
-        else if (!strcmp(argv[j],"--interactive-rows")) 
-        {
+        } else if (!strcmp(argv[j],"--interactive-rows")) {
             Modes.interactive_rows = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--interactive-ttl")) 
-        {
+        } else if (!strcmp(argv[j],"--interactive-ttl")) {
             Modes.interactive_ttl = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j], "--uart"))
-        {
-            Modes.uart = 1;
-        }
-        else if (!strcmp(argv[j], "--uart-rows"))
-        {
-            Modes.uart_rows = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j], "--uart-ttl"))
-        {
-            Modes.uart_ttl = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--debug") && more) 
-        {
+        } else if (!strcmp(argv[j],"--debug") && more) {
             char *f = argv[++j];
             while(*f) {
                 switch(*f) {
@@ -2830,23 +2572,15 @@ int main(int argc, char **argv) {
                 }
                 f++;
             }
-        }
-        else if (!strcmp(argv[j],"--stats")) 
-        {
+        } else if (!strcmp(argv[j],"--stats")) {
             Modes.stats = 1;
-        }
-        else if (!strcmp(argv[j],"--snip") && more) 
-        {
+        } else if (!strcmp(argv[j],"--snip") && more) {
             snipMode(atoi(argv[++j]));
             exit(0);
-        }
-        else if (!strcmp(argv[j],"--help")) 
-        {
+        } else if (!strcmp(argv[j],"--help")) {
             showHelp();
             exit(0);
-        }
-        else 
-        {
+        } else {
             fprintf(stderr,
                 "Unknown or not enough arguments for option '%s'.\n\n",
                 argv[j]);
@@ -2855,28 +2589,19 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Настройка SIGWINCH для обработки строк */
+    /* Setup for SIGWINCH for handling lines */
     if (Modes.interactive == 1) signal(SIGWINCH, sigWinchCallback);
-    /* Настройка SIGWINCH для обработки строк */
-    if (Modes.uart == 1) signal(SIGWINCH, sigWinchCallback);
+
     /* Initialization */
     modesInit();
-    if (Modes.net_only) 
-    {
+    if (Modes.net_only) {
         fprintf(stderr,"Net-only mode, no RTL device or file open.\n");
-    }
-    else if (Modes.filename == NULL) 
-    {
+    } else if (Modes.filename == NULL) {
         modesInitRTLSDR();
-    }
-    else 
-    {
-        if (Modes.filename[0] == '-' && Modes.filename[1] == '\0') 
-        {
+    } else {
+        if (Modes.filename[0] == '-' && Modes.filename[1] == '\0') {
             Modes.fd = STDIN_FILENO;
-        }
-        else if ((Modes.fd = open(Modes.filename,O_RDONLY)) == -1) 
-        {
+        } else if ((Modes.fd = open(Modes.filename,O_RDONLY)) == -1) {
             perror("Opening data file");
             exit(1);
         }
@@ -2885,8 +2610,7 @@ int main(int argc, char **argv) {
 
     /* If the user specifies --net-only, just run in order to serve network
      * clients without reading data from the RTL device. */
-    while (Modes.net_only) 
-    {
+    while (Modes.net_only) {
         backgroundTasks();
         modesWaitReadableClients(100);
     }
@@ -2895,10 +2619,8 @@ int main(int argc, char **argv) {
     pthread_create(&Modes.reader_thread, NULL, readerThreadEntryPoint, NULL);
 
     pthread_mutex_lock(&Modes.data_mutex);
-    while(1) 
-    {
-        if (!Modes.data_ready) 
-        {
+    while(1) {
+        if (!Modes.data_ready) {
             pthread_cond_wait(&Modes.data_cond,&Modes.data_mutex);
             continue;
         }
@@ -2921,8 +2643,7 @@ int main(int argc, char **argv) {
     }
 
     /* If --ifile and --stats were given, print statistics. */
-    if (Modes.stats && Modes.filename) 
-    {
+    if (Modes.stats && Modes.filename) {
         printf("%lld valid preambles\n", Modes.stat_valid_preamble);
         printf("%lld demodulated again after phase correction\n",
             Modes.stat_out_of_phase);
