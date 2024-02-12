@@ -1868,12 +1868,6 @@ void interactiveShowData(void)
     char progress[4];
     int count = 0;
 
-
-    //int serial_port = open("/dev/ttyAMA0", O_RDWR);
-
-    //struct termios tty;
-
-
     memset(progress,' ',3);
     progress[time(NULL)%3] = '.';
     progress[3] = '\0';
@@ -1899,14 +1893,6 @@ void interactiveShowData(void)
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
-
-        // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-      //  write(serial_port, a->hexaddr, sizeof(a->hexaddr)); 
-
-        //echo a->hexaddr > / dev / ttyAMA0;
-        //echo " " > / dev / ttyAMA0;
-        //echo a->flight > / dev / ttyAMA0;
-        //echo "\n" > / dev / ttyAMA0;
         a = a->next;
         count++;
     }
@@ -1916,8 +1902,8 @@ void interactiveShowData(void)
 void uartShowData(void)
 {
     struct aircraft* a = Modes.aircrafts;
-   // time_t now = time(NULL);
-   // char progress[4];
+    time_t now = time(NULL);
+    //char progress[4];
     int count = 0;
 
 
@@ -1953,9 +1939,9 @@ void uartShowData(void)
     cfsetispeed(&tty, B9600);
     cfsetospeed(&tty, B9600);
 
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) 
+    {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        // return 1;
     }
 
  /*    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\n' };
@@ -1973,8 +1959,8 @@ void uartShowData(void)
     //    "--------------------------------------------------------------------------------\n",
     //    progress);
 
-  /*  while (a && count < Modes.uart_rows)
-    {*/
+    while (a && count < Modes.uart_rows)
+    {
         int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
@@ -1984,17 +1970,16 @@ void uartShowData(void)
             speed *= 1.852;
         }
 
-    //    printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-    //        a->hexaddr, a->flight, altitude, speed,
-    //        a->lat, a->lon, a->track, a->messages,
-    //        (int)(now - a->seen));
+        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+            a->hexaddr, a->flight, altitude, speed,
+            a->lat, a->lon, a->track, a->messages,
+            (int)(now - a->seen));
 
         write(serial_port, a->hexaddr, sizeof(a->hexaddr));
 
-
         a = a->next;
         count++;
-   // }
+    }
 }
 
 
