@@ -1993,7 +1993,7 @@ void uartShowData(void)
 
     while (a && count < 15/*Modes.uart_rows*/)
     {
-      //  int altitude = a->altitude, speed = a->speed;
+        int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
         if (Modes.metric)
