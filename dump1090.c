@@ -381,11 +381,6 @@ void modesInit(void) {
 
     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
     write(serial_port, "Hello, world!", sizeof(msg));
-
-
-
-
-
 }
 
 /* =============================== RTLSDR handling ========================== */
@@ -1885,7 +1880,7 @@ void interactiveShowData(void) {
     int count = 0;
 
 
-    int serial_port = open("/dev/ttyUSB0", O_RDWR);
+    int serial_port = open("/dev/ttyANA0", O_RDWR);
 
     struct termios tty;
 
