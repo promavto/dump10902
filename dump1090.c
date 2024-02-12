@@ -1880,13 +1880,14 @@ void interactiveShowData(void) {
     int count = 0;
 
 
-    int serial_port = open("/dev/ttyANA0", O_RDWR);
+    int serial_port = open("/dev/ttyAMA0", O_RDWR);
 
     struct termios tty;
 
     if (tcgetattr(serial_port, &tty) != 0)
     {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+        // return 1;
     }
 
     tty.c_cflag &= ~PARENB;
@@ -1915,12 +1916,8 @@ void interactiveShowData(void) {
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+        //  return 1; 
     }
-
-
-
-
-
 
 
 
@@ -1950,33 +1947,13 @@ void interactiveShowData(void) {
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
 
-        unsigned char msg[] = {' '};
-        //printf_s(msg,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-        //    a->hexaddr, a->flight, altitude, speed,
-        //    a->lat, a->lon, a->track, a->messages,
-        //    (int)(now - a->seen));
-          write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-          write(serial_port, msg, sizeof(msg));
-          write(serial_port, a->flight, sizeof(a->flight));
-          write(serial_port, msg, sizeof(msg));
-          /*write(serial_port, altitude, sizeof(altitude));
-          write(serial_port, msg, sizeof(msg));
-          write(serial_port, speed, sizeof(speed));
-          write(serial_port, msg, sizeof(msg));
-          write(serial_port, a->lat, sizeof(a->lat));
-          write(serial_port, msg, sizeof(msg));
-          write(serial_port, a->lon, sizeof(a->lon));
-          write(serial_port, msg, sizeof(msg));
-          write(serial_port, a->track, sizeof(a->track));*/
-          write(serial_port, "\n", 1);
+        // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
 
-          //unsigned char msg1[30]
-          //printf(msg1,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-          //    a->hexaddr, a->flight, altitude, speed,
-          //    a->lat, a->lon, a->track, a->messages,
-          //    (int)(now - a->seen));
-          //write(serial_port, msg1, sizeof(msg1));
-          //write(serial_port, "\n", 1);
+        //echo a->hexaddr > / dev / ttyAMA0;
+        //echo " " > / dev / ttyAMA0;
+        //echo a->flight > / dev / ttyAMA0;
+        //echo "\n" > / dev / ttyAMA0;
         a = a->next;
         count++;
     }
