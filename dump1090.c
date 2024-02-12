@@ -2113,43 +2113,15 @@ void modesSendAllClients(int service, void *msg, int len)
 {
     int j;
     struct client *c;
-    //int serial_port = open("/dev/ttyUSB0", O_RDWR);
+    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    struct termios tty;
+    /*   if (tcgetattr(serial_port, &tty) != 0)
+       {
+           printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+       }*/
 
-    //struct termios tty;
-
-    //if (tcgetattr(serial_port, &tty) != 0)
-    //{
-    //    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    //}
-
-    //tty.c_cflag &= ~PARENB;
-    //tty.c_cflag &= ~CSTOPB;
-    //tty.c_cflag &= ~CSIZE;
-    //tty.c_cflag |= CS8;
-    //tty.c_cflag &= ~CRTSCTS;
-    //tty.c_cflag |= CREAD | CLOCAL;
-
-    //tty.c_lflag &= ~ICANON;
-    //tty.c_lflag &= ~ECHO;
-    //tty.c_lflag &= ~ECHOE;
-    //tty.c_lflag &= ~ECHONL;
-    //tty.c_lflag &= ~ISIG;
-    //tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    //tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    //tty.c_oflag &= ~OPOST;
-    //tty.c_oflag &= ~ONLCR;
-
-    //tty.c_cc[VTIME] = 10;
-    //tty.c_cc[VMIN] = 0;
-
-    //cfsetispeed(&tty, B9600);
-    //cfsetospeed(&tty, B9600);
-
-    //if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-    //    printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    //}
-
+       // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+  /*  write(serial_port, msg, sizeof(msg));*/
 
 
 
@@ -2160,10 +2132,8 @@ void modesSendAllClients(int service, void *msg, int len)
         {
             int nwritten = write(j, msg, len);
 
-
-            //write(serial_port, msg, sizeof(len));
-
-
+            write(serial_port, msg, sizeof(msg));
+  
             if (nwritten != len) 
             {
                 modesFreeClient(j);
@@ -2176,6 +2146,8 @@ void modesSendAllClients(int service, void *msg, int len)
 void modesSendRawOutput(struct modesMessage *mm) 
 {
     char msg[128], *p = msg;
+    char msg1[128];
+
     int j;
 
     *p++ = '*';
@@ -2188,15 +2160,15 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = '\n';
     modesSendAllClients(Modes.ros, msg, p-msg);
 
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    struct termios tty;
- /*   if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }*/
+ //   int serial_port = open("/dev/ttyAMA0", O_RDWR);
+ //   struct termios tty;
+ ///*   if (tcgetattr(serial_port, &tty) != 0)
+ //   {
+ //       printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+ //   }*/
 
-   // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, p - msg, sizeof(p - msg));
+ //  // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+ //   write(serial_port, p - msg, sizeof(p - msg));
 
 
 
