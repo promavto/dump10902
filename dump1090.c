@@ -2190,13 +2190,13 @@ void modesSendRawOutput(struct modesMessage *mm)
 
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
     struct termios tty;
-    if (tcgetattr(serial_port, &tty) != 0)
+ /*   if (tcgetattr(serial_port, &tty) != 0)
     {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
+    }*/
 
    // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, msg, sizeof(msg));
+    write(serial_port, p, sizeof(p));
 
 
 
