@@ -96,7 +96,7 @@
 
 #define MODES_NOTUSED(V) ((void) V)
 
-/* Structure used to describe a networking client. */
+ /* Структура, используемая для описания сетевого клиента. */
 struct client {
     int fd;         /* File descriptor. */
     int service;    /* TCP port the client is connected to. */
@@ -104,7 +104,7 @@ struct client {
     int buflen;                         /* Amount of data on buffer. */
 };
 
-/* Structure used to describe an aircraft in iteractive mode. */
+/* Структура, используемая для описания самолета в интерактивном режиме. */
 struct aircraft {
     uint32_t addr;      /* ICAO address */
     char hexaddr[7];    /* Printable ICAO address */
@@ -286,15 +286,15 @@ void modesInit(void) {
 
     pthread_mutex_init(&Modes.data_mutex,NULL);
     pthread_cond_init(&Modes.data_cond,NULL);
-    /* We add a full message minus a final bit to the length, so that we
-     * can carry the remaining part of the buffer that we can't process
-     * in the message detection loop, back at the start of the next data
-     * to process. This way we are able to also detect messages crossing
-     * two reads. */
+    /* Мы добавляем полное сообщение минус последний бит в длину, так что мы
+    * может нести оставшуюся часть буфера, которую мы не можем обработать
+    * В цикле обнаружения сообщений, в начале следующих данных
+    * обрабатывать. Таким образом, мы можем также обнаружить пересечение сообщений
+    * Два читают. */
     Modes.data_len = MODES_DATA_LEN + (MODES_FULL_LEN-1)*4;
     Modes.data_ready = 0;
-    /* Allocate the ICAO address cache. We use two uint32_t for every
-     * entry because it's a addr / timestamp pair for every entry. */
+    /* Выделите кеш адреса ICAO. Мы используем два uint32_t для каждого
+    * Вход, потому что это пара Addr / TimeStamp для каждой записи. */
     Modes.icao_cache = malloc(sizeof(uint32_t)*MODES_ICAO_CACHE_LEN*2);
     memset(Modes.icao_cache,0,sizeof(uint32_t)*MODES_ICAO_CACHE_LEN*2);
     Modes.aircrafts = NULL;
@@ -306,19 +306,19 @@ void modesInit(void) {
     }
     memset(Modes.data,127,Modes.data_len);
 
-    /* Populate the I/Q -> Magnitude lookup table. It is used because
-     * sqrt or round may be expensive and performance may vary a lot
-     * depending on the libc used.
-     *
-     * Note that we don't need to fill the table for negative values, as
-     * we square both i and q to take the magnitude. So the maximum absolute
-     * value of i and q is 128, thus the maximum magnitude we get is:
-     *
-     * sqrt(128*128+128*128) = ~181.02
-     *
-     * Then, to retain the full resolution and be able to distinguish among
-     * every pair of I/Q values, we scale this range from the float range
-     * 0-181 to the uint16_t range of 0-65536 by multiplying for 360. */
+    /* Заполните таблицу поиска i/q ->. Это используется потому, что
+    * SQRT или раунд может быть дорогим, а производительность может сильно различаться
+    * В зависимости от используемого LIBC.
+    *
+    * Обратите внимание, что нам не нужно заполнять таблицу для отрицательных значений, как
+    * Мы квадрат как I, так и Q, чтобы взять величину. Итак, максимальный абсолютный
+    * Значение I и Q равно 128, таким образом, максимальная величина, которую мы получаем:
+    *
+    *SQRT (128*128+128*128) = ~ 181,02
+    *
+    * Затем, чтобы сохранить полное разрешение и иметь возможность различать между
+    * Каждая пара значений I/Q, мы масштабируем этот диапазон от диапазона плавания
+    * 0-181 в диапазоне UINT16_T 0-65536, умножившись на 360. */
     Modes.maglut = malloc(129*129*2);
     for (i = 0; i <= 128; i++) {
         for (q = 0; q <= 128; q++) {
@@ -339,48 +339,57 @@ void modesInit(void) {
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
 
-    /*======================================================================*/
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    ///*======================= UART ====================================*/
+    //int serial_port = open("/dev/ttyAMA0", O_RDWR);
 
-    struct termios tty;
+    //struct termios tty;
 
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-        // return 1;
-    }
+    //if (tcgetattr(serial_port, &tty) != 0)
+    //{
+    //    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+    //    // return 1;
+    //}
 
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
+    //tty.c_cflag &= ~PARENB;
+    //tty.c_cflag &= ~CSTOPB;
+    //tty.c_cflag &= ~CSIZE;
+    //tty.c_cflag |= CS8;
+    //tty.c_cflag &= ~CRTSCTS;
+    //tty.c_cflag |= CREAD | CLOCAL;
 
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+    //tty.c_lflag &= ~ICANON;
+    //tty.c_lflag &= ~ECHO;
+    //tty.c_lflag &= ~ECHOE;
+    //tty.c_lflag &= ~ECHONL;
+    //tty.c_lflag &= ~ISIG;
+    //tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    //tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
 
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
+    //tty.c_oflag &= ~OPOST;
+    //tty.c_oflag &= ~ONLCR;
 
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
+    //tty.c_cc[VTIME] = 10;
+    //tty.c_cc[VMIN] = 0;
 
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
+    //cfsetispeed(&tty, B9600);
+    //cfsetospeed(&tty, B9600);
 
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        // return 1;
-    }
+    //if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+    //    printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+    //    // return 1;
+    //}
 
-    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, "Hello, world!", sizeof(msg));
+    //unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+    //write(serial_port, "Hello, world!", sizeof(msg));
+
+    fflush(stdout);
+
+    fprintf(stdout, "Hello world.\n");
+
+    printf("Hello World2.");
+    fflush(stdout);
+
+
 }
 
 /* =============================== RTLSDR handling ========================== */
@@ -622,18 +631,18 @@ void dumpRawMessageJS(char *descr, unsigned char *msg,
     fclose(fp);
 }
 
-/* This is a wrapper for dumpMagnitudeVector() that also show the message
- * in hex format with an additional description.
- *
- * descr  is the additional message to show to describe the dump.
- * msg    points to the decoded message
- * m      is the original magnitude vector
- * offset is the offset where the message starts
- *
- * The function also produces the Javascript file used by debug.html to
- * display packets in a graphical format if the Javascript output was
- * enabled.
- */
+/* Это оболочка для dumpMagnitudeVector(), которая также отображает сообщение
+  * в шестнадцатеричном формате с дополнительным описанием.
+  *
+  * descr — дополнительное сообщение, описывающее дамп.
+  * msg указывает на декодированное сообщение
+  * m — исходный вектор магнитуды
+  * offset — это смещение, с которого начинается сообщение.
+  *
+  * Функция также создает файл Javascript, используемый debug.html для
+  * отображать пакеты в графическом формате, если вывод Javascript был
+  * включено.
+  */
 void dumpRawMessage(char *descr, unsigned char *msg,
                     uint16_t *m, uint32_t offset)
 {
@@ -1604,28 +1613,31 @@ good_preamble:
     }
 }
 
-/* When a new message is available, because it was decoded from the
- * RTL device, file, or received in the TCP input port, or any other
- * way we can receive a decoded message, we call this function in order
- * to use the message.
- *
- * Basically this function passes a raw message to the upper layers for
- * further processing and visualization. */
-void useModesMessage(struct modesMessage *mm) {
-    if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) {
-        /* Track aircrafts in interactive mode or if the HTTP
-         * interface is enabled. */
-        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) {
+/* Когда доступно новое сообщение, потому что оно было декодировано из
+  * Устройство RTL, файл или полученное в входном порту TCP или в любом другом
+  * Способ, которым мы можем получить декодированное сообщение, мы называем эту функцию в порядке
+  * Использовать сообщение.
+  *
+  * В основном эта функция передает необработанное сообщение в верхние слои для
+  * Дальнейшая обработка и визуализация. */
+void useModesMessage(struct modesMessage *mm) 
+{
+    if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) 
+    {
+        /* Отслеживать самолеты в интерактивном режиме или если HTTP
+        * Интерфейс включен. */
+        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) 
+        {
             struct aircraft *a = interactiveReceiveData(mm);
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
-        /* In non-interactive way, display messages on standard output. */
+        /* Неинтерактивно, отображать сообщения на стандартном выводе. */
         if (!Modes.interactive) 
         {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
-        /* Send data to connected clients. */
+        /* Отправить данные подключенным клиентам. */
         if (Modes.net) 
         {
             modesSendRawOutput(mm);  /* Feed raw output clients. */
@@ -1635,9 +1647,9 @@ void useModesMessage(struct modesMessage *mm) {
 
 /* ========================= Interactive mode =============================== */
 
-/* Return a new aircraft structure for the interactive mode linked list
- * of aircrafts. */
-struct aircraft *interactiveCreateAircraft(uint32_t addr) {
+/* Вернуть новую структуру самолета для связанного списка интерактивного режима самолетов. */
+struct aircraft *interactiveCreateAircraft(uint32_t addr) 
+{
     struct aircraft *a = malloc(sizeof(*a));
 
     a->addr = addr;
@@ -1660,9 +1672,9 @@ struct aircraft *interactiveCreateAircraft(uint32_t addr) {
     return a;
 }
 
-/* Return the aircraft with the specified address, or NULL if no aircraft
- * exists with this address. */
-struct aircraft *interactiveFindAircraft(uint32_t addr) {
+/* Вернуть самолет с указанным адресом или NULL, если нет самолета с этим адресом. */
+struct aircraft *interactiveFindAircraft(uint32_t addr) 
+{
     struct aircraft *a = Modes.aircrafts;
 
     while(a) {
@@ -1679,7 +1691,7 @@ int cprModFunction(int a, int b) {
     return res;
 }
 
-/* The NL function uses the precomputed table from 1090-WP-9-14 */
+/*Функция NL использует предварительную таблицу из 1090 - WP - 9 - 14 */
 int cprNLFunction(double lat) {
     if (lat < 0) lat = -lat; /* Table is simmetric about the equator. */
     if (lat < 10.47047130) return 59;
@@ -1802,7 +1814,8 @@ void decodeCPR(struct aircraft *a) {
 }
 
 /* Получаем новые сообщения и заполняем интерактивный режим дополнительной информацией. */
-struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
+struct aircraft *interactiveReceiveData(struct modesMessage *mm) 
+{
     uint32_t addr;
     struct aircraft *a, *aux;
 
@@ -1872,8 +1885,9 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     return a;
 }
 
-/* Show the currently captured interactive data on screen. */
-void interactiveShowData(void) {
+/* Показать текущие захваченные интерактивные данные на экране. */
+void interactiveShowData(void) 
+{
     struct aircraft *a = Modes.aircrafts;
     time_t now = time(NULL);
     char progress[4];
@@ -2040,7 +2054,7 @@ struct {
     {"Basestation TCP output", &Modes.sbsos, MODES_NET_OUTPUT_SBS_PORT}
 };
 
-/* Networking "stack" initialization. */
+/* Инициализация сети «стека». */
 void modesInitNet(void) {
     int j;
 
@@ -2063,25 +2077,28 @@ void modesInitNet(void) {
     signal(SIGPIPE, SIG_IGN);
 }
 
-/* This function gets called from time to time when the decoding thread is
- * awakened by new data arriving. This usually happens a few times every
- * second. */
-void modesAcceptClients(void) {
+ /* Эта функция время от времени вызывается, когда поток декодирования
+  * Пробуждено новыми данными, прибывающими. Это обычно случается несколько раз каждый второй. */
+void modesAcceptClients(void) 
+{
     int fd, port;
     unsigned int j;
     struct client *c;
 
-    for (j = 0; j < MODES_NET_SERVICES_NUM; j++) {
+    for (j = 0; j < MODES_NET_SERVICES_NUM; j++) 
+    {
         fd = anetTcpAccept(Modes.aneterr, *modesNetServices[j].socket,
                            NULL, &port);
-        if (fd == -1) {
+        if (fd == -1) 
+        {
             if (Modes.debug & MODES_DEBUG_NET && errno != EAGAIN)
                 printf("Accept %d: %s\n", *modesNetServices[j].socket,
                        strerror(errno));
             continue;
         }
 
-        if (fd >= MODES_NET_MAX_FD) {
+        if (fd >= MODES_NET_MAX_FD) 
+        {
             close(fd);
             return; /* Max number of clients reached. */
         }
@@ -2105,8 +2122,9 @@ void modesAcceptClients(void) {
     }
 }
 
-/* On error free the client, collect the structure, adjust maxfd if needed. */
-void modesFreeClient(int fd) {
+/* При ошибке бесплатно клиенту, соберите структуру, при необходимости отрегулируйте MAXFD. */
+void modesFreeClient(int fd) 
+{
     close(fd);
     free(Modes.clients[fd]);
     Modes.clients[fd] = NULL;
@@ -2114,9 +2132,9 @@ void modesFreeClient(int fd) {
     if (Modes.debug & MODES_DEBUG_NET)
         printf("Closing client %d\n", fd);
 
-    /* If this was our maxfd, scan the clients array to find the new max.
-     * Note that we are sure there is no active fd greater than the closed
-     * fd, so we scan from fd-1 to 0. */
+    /* Если это был наш MaxFD, сканируйте массив клиентов, чтобы найти новый макс.
+    * Обратите внимание, что мы уверены, что нет активного FD больше, чем закрытый
+    * fd, поэтому мы сканируем с FD-1 до 0. */
     if (Modes.maxfd == fd) {
         int j;
 
@@ -2210,6 +2228,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = '\n';
     modesSendAllClients(Modes.ros, msg, p-msg);
 }
+
 
 
 /* Write SBS output to TCP clients. */
@@ -2588,7 +2607,8 @@ void modesWaitReadableClients(int timeout_ms) {
 /* ============================ Terminal handling  ========================== */
 
 /* Handle resizing terminal. */
-void sigWinchCallback() {
+void sigWinchCallback() 
+{
     signal(SIGWINCH, SIG_IGN);
     Modes.interactive_rows = getTermRows();
     interactiveShowData();
@@ -2596,7 +2616,8 @@ void sigWinchCallback() {
 }
 
 /* Get the number of rows after the terminal changes size. */
-int getTermRows() {
+int getTermRows() 
+{
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     return w.ws_row;
@@ -2654,15 +2675,37 @@ void backgroundTasks(void)
     }
 
     /* Refresh screen when in interactive mode. */
-    if (Modes.interactive &&
-        (mstime() - Modes.interactive_last_update) >
-        MODES_INTERACTIVE_REFRESH_TIME)
+    if (Modes.interactive && (mstime() - Modes.interactive_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
     {
         interactiveRemoveStaleAircrafts();
         interactiveShowData();
         Modes.interactive_last_update = mstime();
     }
 }
+
+
+void modesSendRawOutputUART(struct modesMessage* mm)
+{
+    char msg[128], * p = msg;
+    int j;
+
+    *p++ = '*';
+    for (j = 0; j < mm->msgbits / 8; j++)
+    {
+        sprintf(p, "%02X", mm->msg[j]);
+        p += 2;
+    }
+    *p++ = ';';
+    *p++ = '\n';
+   // modesSendAllClients(Modes.ros, msg, p - msg);
+}
+
+
+
+
+
+
+
 
 int main(int argc, char **argv) {
     int j;
@@ -2671,7 +2714,8 @@ int main(int argc, char **argv) {
     modesInitConfig();
 
     /* Parse the command line options */
-    for (j = 1; j < argc; j++) {
+    for (j = 1; j < argc; j++) 
+    {
         int more = j+1 < argc; /* There are more arguments. */
 
         if (!strcmp(argv[j],"--device-index") && more) {
@@ -2735,15 +2779,22 @@ int main(int argc, char **argv) {
                 }
                 f++;
             }
-        } else if (!strcmp(argv[j],"--stats")) {
+        } else if (!strcmp(argv[j],"--stats")) 
+        {
             Modes.stats = 1;
-        } else if (!strcmp(argv[j],"--snip") && more) {
+        }
+        else if (!strcmp(argv[j],"--snip") && more) 
+        {
             snipMode(atoi(argv[++j]));
             exit(0);
-        } else if (!strcmp(argv[j],"--help")) {
+        }
+        else if (!strcmp(argv[j],"--help")) 
+        {
             showHelp();
             exit(0);
-        } else {
+        }
+        else 
+        {
             fprintf(stderr,
                 "Unknown or not enough arguments for option '%s'.\n\n",
                 argv[j]);
@@ -2752,16 +2803,21 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Setup for SIGWINCH for handling lines */
+    /*Настройка для Sigwinch для обработки строк */
     if (Modes.interactive == 1) signal(SIGWINCH, sigWinchCallback);
 
     /* Initialization */
     modesInit();
-    if (Modes.net_only) {
+    if (Modes.net_only) 
+    {
         fprintf(stderr,"Net-only mode, no RTL device or file open.\n");
-    } else if (Modes.filename == NULL) {
+    }
+    else if (Modes.filename == NULL) 
+    {
         modesInitRTLSDR();
-    } else {
+    }
+    else 
+    {
         if (Modes.filename[0] == '-' && Modes.filename[1] == '\0') {
             Modes.fd = STDIN_FILENO;
         } else if ((Modes.fd = open(Modes.filename,O_RDONLY)) == -1) {
@@ -2773,7 +2829,8 @@ int main(int argc, char **argv) {
 
     /* If the user specifies --net-only, just run in order to serve network
      * clients without reading data from the RTL device. */
-    while (Modes.net_only) {
+    while (Modes.net_only) 
+    {
         backgroundTasks();
         modesWaitReadableClients(100);
     }
@@ -2782,8 +2839,10 @@ int main(int argc, char **argv) {
     pthread_create(&Modes.reader_thread, NULL, readerThreadEntryPoint, NULL);
 
     pthread_mutex_lock(&Modes.data_mutex);
-    while(1) {
-        if (!Modes.data_ready) {
+    while(1) 
+    {
+        if (!Modes.data_ready) 
+        {
             pthread_cond_wait(&Modes.data_cond,&Modes.data_mutex);
             continue;
         }
@@ -2806,7 +2865,8 @@ int main(int argc, char **argv) {
     }
 
     /* If --ifile and --stats were given, print statistics. */
-    if (Modes.stats && Modes.filename) {
+    if (Modes.stats && Modes.filename) 
+    {
         printf("%lld valid preambles\n", Modes.stat_valid_preamble);
         printf("%lld demodulated again after phase correction\n",
             Modes.stat_out_of_phase);
