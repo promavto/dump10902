@@ -2196,7 +2196,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     }*/
 
    // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, p, sizeof(p));
+    write(serial_port, p - msg, sizeof(p - msg));
 
 
 
