@@ -1927,13 +1927,13 @@ void interactiveShowData(void) {
           write(serial_port, a->track, sizeof(a->track));*/
           write(serial_port, "\n", 1);
 
-          unsigned char msg1[30]
-          printf(msg1,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-              a->hexaddr, a->flight, altitude, speed,
-              a->lat, a->lon, a->track, a->messages,
-              (int)(now - a->seen));
-          write(serial_port, msg1, sizeof(msg1));
-          write(serial_port, "\n", 1);
+          //unsigned char msg1[30]
+          //printf(msg1,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+          //    a->hexaddr, a->flight, altitude, speed,
+          //    a->lat, a->lon, a->track, a->messages,
+          //    (int)(now - a->seen));
+          //write(serial_port, msg1, sizeof(msg1));
+          //write(serial_port, "\n", 1);
         a = a->next;
         count++;
     }
