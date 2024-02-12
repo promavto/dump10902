@@ -1923,7 +1923,7 @@ void uartShowData(void)
 
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
 
-    struct termios tty;
+   // struct termios tty;
 
      unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
      write(serial_port, msg, sizeof(msg));
