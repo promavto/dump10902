@@ -1905,12 +1905,12 @@ void interactiveShowData(void) {
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
 
-        unsigned char msg[] = { 0 };
-        printf_s(msg,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-            a->hexaddr, a->flight, altitude, speed,
-            a->lat, a->lon, a->track, a->messages,
-            (int)(now - a->seen));
-          write(serial_port, msg, sizeof(msg));
+        //unsigned char msg[] = { 0 };
+        //printf_s(msg,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+        //    a->hexaddr, a->flight, altitude, speed,
+        //    a->lat, a->lon, a->track, a->messages,
+        //    (int)(now - a->seen));
+          write(serial_port, a, sizeof(a));
 
         a = a->next;
         count++;
