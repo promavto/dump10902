@@ -1836,6 +1836,51 @@ void interactiveShowData(void) {
     char progress[4];
     int count = 0;
 
+
+    int serial_port = open("/dev/ttyUSB0", O_RDWR);
+
+    struct termios tty;
+
+    if (tcgetattr(serial_port, &tty) != 0)
+    {
+        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+    }
+
+    tty.c_cflag &= ~PARENB;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+    tty.c_cflag &= ~CRTSCTS;
+    tty.c_cflag |= CREAD | CLOCAL;
+
+    tty.c_lflag &= ~ICANON;
+    tty.c_lflag &= ~ECHO;
+    tty.c_lflag &= ~ECHOE;
+    tty.c_lflag &= ~ECHONL;
+    tty.c_lflag &= ~ISIG;
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+
+    tty.c_oflag &= ~OPOST;
+    tty.c_oflag &= ~ONLCR;
+
+    tty.c_cc[VTIME] = 10;
+    tty.c_cc[VMIN] = 0;
+
+    cfsetispeed(&tty, B9600);
+    cfsetospeed(&tty, B9600);
+
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+    }
+
+
+
+
+
+
+
+
     memset(progress,' ',3);
     progress[time(NULL)%3] = '.';
     progress[3] = '\0';
@@ -1859,6 +1904,14 @@ void interactiveShowData(void) {
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
+
+        unsigned char msg[];
+        printf_s(msg,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+            a->hexaddr, a->flight, altitude, speed,
+            a->lat, a->lon, a->track, a->messages,
+            (int)(now - a->seen));
+          write(serial_port, msg, sizeof(msg));
+
         a = a->next;
         count++;
     }
@@ -2040,42 +2093,42 @@ void modesSendAllClients(int service, void *msg, int len)
 {
     int j;
     struct client *c;
-    int serial_port = open("/dev/ttyUSB0", O_RDWR);
+    //int serial_port = open("/dev/ttyUSB0", O_RDWR);
 
-    struct termios tty;
+    //struct termios tty;
 
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
+    //if (tcgetattr(serial_port, &tty) != 0)
+    //{
+    //    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+    //}
 
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
+    //tty.c_cflag &= ~PARENB;
+    //tty.c_cflag &= ~CSTOPB;
+    //tty.c_cflag &= ~CSIZE;
+    //tty.c_cflag |= CS8;
+    //tty.c_cflag &= ~CRTSCTS;
+    //tty.c_cflag |= CREAD | CLOCAL;
 
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+    //tty.c_lflag &= ~ICANON;
+    //tty.c_lflag &= ~ECHO;
+    //tty.c_lflag &= ~ECHOE;
+    //tty.c_lflag &= ~ECHONL;
+    //tty.c_lflag &= ~ISIG;
+    //tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    //tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
 
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
+    //tty.c_oflag &= ~OPOST;
+    //tty.c_oflag &= ~ONLCR;
 
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
+    //tty.c_cc[VTIME] = 10;
+    //tty.c_cc[VMIN] = 0;
 
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
+    //cfsetispeed(&tty, B9600);
+    //cfsetospeed(&tty, B9600);
 
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    }
+    //if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+    //    printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+    //}
 
 
 
@@ -2088,7 +2141,7 @@ void modesSendAllClients(int service, void *msg, int len)
             int nwritten = write(j, msg, len);
 
 
-            write(serial_port, msg, sizeof(len));
+            //write(serial_port, msg, sizeof(len));
 
 
             if (nwritten != len) 
