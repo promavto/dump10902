@@ -1947,7 +1947,7 @@ void interactiveShowData(void)
 void uartShowData(void)
 {
     struct aircraft* a = Modes.aircrafts;
-    time_t now = time(NULL);
+   // time_t now = time(NULL);
     int count = 0;
 
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
@@ -2008,6 +2008,7 @@ void uartShowData(void)
         //    (int)(now - a->seen));
 
         write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+        write(serial_port, " / ", sizeof(" / "));
         write(serial_port, a->flight, sizeof(a->flight));
 
         a = a->next;
