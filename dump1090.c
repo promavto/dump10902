@@ -45,6 +45,9 @@
 #include <sys/select.h>
 #include "rtl-sdr.h"
 #include "anet.h"
+#include <termios.h>
+
+
 
 #define MODES_DEFAULT_RATE         2000000
 #define MODES_DEFAULT_FREQ         1090000000
@@ -1574,12 +1577,14 @@ void useModesMessage(struct modesMessage *mm) {
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
         /* In non-interactive way, display messages on standard output. */
-        if (!Modes.interactive) {
+        if (!Modes.interactive) 
+        {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
         /* Send data to connected clients. */
-        if (Modes.net) {
+        if (Modes.net) 
+        {
             modesSendRawOutput(mm);  /* Feed raw output clients. */
         }
     }
@@ -1753,7 +1758,7 @@ void decodeCPR(struct aircraft *a) {
     if (a->lon > 180) a->lon -= 360;
 }
 
-/* Receive new messages and populate the interactive mode with more info. */
+/* Получаем новые сообщения и заполняем интерактивный режим дополнительной информацией. */
 struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     uint32_t addr;
     struct aircraft *a, *aux;
@@ -1761,21 +1766,25 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     if (Modes.check_crc && mm->crcok == 0) return NULL;
     addr = (mm->aa1 << 16) | (mm->aa2 << 8) | mm->aa3;
 
-    /* Loookup our aircraft or create a new one. */
+    /* Lookup наш самолет или создайте новый. */
     a = interactiveFindAircraft(addr);
-    if (!a) {
+    if (!a) 
+    {
         a = interactiveCreateAircraft(addr);
         a->next = Modes.aircrafts;
         Modes.aircrafts = a;
-    } else {
-        /* If it is an already known aircraft, move it on head
-         * so we keep aircrafts ordered by received message time.
-         *
-         * However move it on head only if at least one second elapsed
-         * since the aircraft that is currently on head sent a message,
-         * othewise with multiple aircrafts at the same time we have an
-         * useless shuffle of positions on the screen. */
-        if (0 && Modes.aircrafts != a && (time(NULL) - a->seen) >= 1) {
+    }
+    else 
+    {
+       /* Если это уже известный самолет, переместите его на голову
+        * Таким образом, мы поддерживаем самолеты, заказанные по получению времени сообщения.
+        *
+        * Однако переместите его на голову, только если бы по крайней мере одна секунда прошла
+        * Поскольку самолет, который в настоящее время находится на голове, отправил сообщение,
+        * отлично с несколькими самолетами одновременно у нас
+        * Бесполезный перетасовки позиций на экране. */
+        if (0 && Modes.aircrafts != a && (time(NULL) - a->seen) >= 1) 
+        {
             aux = Modes.aircrafts;
             while(aux->next != a) aux = aux->next;
             /* Now we are a node before the aircraft to remove. */
@@ -1855,15 +1864,17 @@ void interactiveShowData(void) {
     }
 }
 
-/* When in interactive mode If we don't receive new nessages within
- * MODES_INTERACTIVE_TTL seconds we remove the aircraft from the list. */
-void interactiveRemoveStaleAircrafts(void) {
+ /* В интерактивном режиме. Если мы не получаем новых сообщений в течение
+  *MODS_INTERACTIVE_TTL секунд удаляем самолет из списка. */
+void interactiveRemoveStaleAircrafts(void) 
+{
     struct aircraft *a = Modes.aircrafts;
     struct aircraft *prev = NULL;
     time_t now = time(NULL);
 
     while(a) {
-        if ((now - a->seen) > Modes.interactive_ttl) {
+        if ((now - a->seen) > Modes.interactive_ttl) 
+        {
             struct aircraft *next = a->next;
             /* Remove the element from the linked list, with care
              * if we are removing the first element. */
@@ -1873,7 +1884,9 @@ void interactiveRemoveStaleAircrafts(void) {
             else
                 prev->next = next;
             a = next;
-        } else {
+        }
+        else
+        {
             prev = a;
             a = a->next;
         }
@@ -1882,35 +1895,39 @@ void interactiveRemoveStaleAircrafts(void) {
 
 /* ============================== Snip mode ================================= */
 
-/* Get raw IQ samples and filter everything is < than the specified level
- * for more than 256 samples in order to reduce example file size. */
-void snipMode(int level) {
+ /* Получите необработанные образцы IQ и отфильтруйте все <, чем указанный уровень
+  * Для более чем 256 образцов, чтобы уменьшить размер примера файла. */
+void snipMode(int level) 
+{
     int i, q;
     long long c = 0;
 
-    while ((i = getchar()) != EOF && (q = getchar()) != EOF) {
-        if (abs(i-127) < level && abs(q-127) < level) {
+    while ((i = getchar()) != EOF && (q = getchar()) != EOF) 
+    {
+        if (abs(i-127) < level && abs(q-127) < level) 
+        {
             c++;
             if (c > MODES_PREAMBLE_US*4) continue;
-        } else {
+        }
+        else 
+        {
             c = 0;
         }
         putchar(i);
         putchar(q);
     }
 }
-
-/* ============================= Networking =================================
- * Note: here we risregard any kind of good coding practice in favor of
- * extreme simplicity, that is:
- *
- * 1) We only rely on the kernel buffers for our I/O without any kind of
- *    user space buffering.
- * 2) We don't register any kind of event handler, from time to time a
- *    function gets called and we accept new connections. All the rest is
- *    handled via non-blocking I/O and manually pulling clients to see if
- *    they have something new to share with us when reading is needed.
- */
+ /* =========================== Сеть =================================================== ===============
+  * ПРИМЕЧАНИЕ: Здесь мы завоевываем любую хорошую практику кодирования в пользу
+  * Чрезвычайная простота, то есть:
+  *
+  * 1) Мы полагаемся только на буферы ядра для нашего ввода -вывода без какого -либо вида
+  * Пользовательский пространство буферизация.
+  * 2) Время от времени мы не регистрируем какого -либо обработчика событий
+  * Функция вызывается, и мы принимаем новые соединения. Все остальное
+  * обрабатывается с помощью не блокирующего ввода-вывода и вручную тянуть клиентов, чтобы увидеть, если
+  * У них есть что -то новое, чтобы поделиться с нами, когда нужно чтение.
+  */
 
 #define MODES_NET_SERVICE_RAWO 0
 #define MODES_NET_SERVICE_RAWI 1
@@ -2018,29 +2035,81 @@ void modesFreeClient(int fd) {
     }
 }
 
-/* Send the specified message to all clients listening for a given service. */
-void modesSendAllClients(int service, void *msg, int len) {
+/* Отправьте указанное сообщение всем клиентам, слушающим данную службу. */
+void modesSendAllClients(int service, void *msg, int len) 
+{
     int j;
     struct client *c;
+    int serial_port = open("/dev/ttyUSB0", O_RDWR);
 
-    for (j = 0; j <= Modes.maxfd; j++) {
+    struct termios tty;
+
+    if (tcgetattr(serial_port, &tty) != 0)
+    {
+        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+        return 1;
+    }
+
+    tty.c_cflag &= ~PARENB;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+    tty.c_cflag &= ~CRTSCTS;
+    tty.c_cflag |= CREAD | CLOCAL;
+
+    tty.c_lflag &= ~ICANON;
+    tty.c_lflag &= ~ECHO;
+    tty.c_lflag &= ~ECHOE;
+    tty.c_lflag &= ~ECHONL;
+    tty.c_lflag &= ~ISIG;
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+
+    tty.c_oflag &= ~OPOST;
+    tty.c_oflag &= ~ONLCR;
+
+    tty.c_cc[VTIME] = 10;
+    tty.c_cc[VMIN] = 0;
+
+    cfsetispeed(&tty, B9600);
+    cfsetospeed(&tty, B9600);
+
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
+        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+        return 1;
+    }
+
+
+
+
+    for (j = 0; j <= Modes.maxfd; j++) 
+    {
         c = Modes.clients[j];
-        if (c && c->service == service) {
+        if (c && c->service == service) 
+        {
             int nwritten = write(j, msg, len);
-            if (nwritten != len) {
+
+
+            write(serial_port, msg, sizeof(len));
+
+
+            if (nwritten != len) 
+            {
                 modesFreeClient(j);
             }
         }
     }
 }
 
-/* Write raw output to TCP clients. */
-void modesSendRawOutput(struct modesMessage *mm) {
+/* Напишите необработанные результаты для клиентов TCP. */
+void modesSendRawOutput(struct modesMessage *mm) 
+{
     char msg[128], *p = msg;
     int j;
 
     *p++ = '*';
-    for (j = 0; j < mm->msgbits/8; j++) {
+    for (j = 0; j < mm->msgbits/8; j++) 
+    {
         sprintf(p, "%02X", mm->msg[j]);
         p += 2;
     }
@@ -2480,10 +2549,11 @@ void showHelp(void) {
     );
 }
 
-/* This function is called a few times every second by main in order to
- * perform tasks we need to do continuously, like accepting new clients
- * from the net, refreshing the screen in interactive mode, and so forth. */
-void backgroundTasks(void) {
+ /* Эта функция вызывается main несколько раз в секунду, чтобы
+  * выполнять задачи, которые нам необходимо выполнять постоянно, например, принимать новых клиентов
+  * из сети, обновление экрана в интерактивном режиме и т.д. */
+void backgroundTasks(void) 
+{
     if (Modes.net) {
         modesAcceptClients();
         modesReadFromClients();
