@@ -379,8 +379,8 @@ void modesInit(void) {
     //    // return 1;
     //}
 
-    //unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    //write(serial_port, "Hello, world!", sizeof(msg));
+    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+    write(serial_port, msg, sizeof(msg));
 
     fflush(stdout);
 
