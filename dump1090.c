@@ -2121,8 +2121,8 @@ void modesSendAllClients(int service, void *msg, int len)
        }*/
 
        // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, msg, sizeof(len));
-
+   // write(serial_port, msg, sizeof(len));
+    write(serial_port, "LEN= "+ (char)len, 10);
 
 
     for (j = 0; j <= Modes.maxfd; j++) 
