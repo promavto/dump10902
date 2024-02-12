@@ -1903,7 +1903,6 @@ void uartShowData(void)
 {
     struct aircraft* a = Modes.aircrafts;
     time_t now = time(NULL);
-    //char progress[4];
     int count = 0;
 
 
@@ -1948,18 +1947,7 @@ void uartShowData(void)
      write(serial_port, msg, sizeof(msg));
 
 
-
-    //memset(progress, ' ', 3);
-    //progress[time(NULL) % 3] = '.';
-    //progress[3] = '\0';
-
-    //printf("\x1b[H\x1b[2J");    /* Clear the screen */
-    //printf(
-    //    "Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
-    //    "--------------------------------------------------------------------------------\n",
-    //    progress);
-
-    while (a && count < Modes.uart_rows)
+    while (a /*&& count < Modes.uart_rows*/)
     {
         int altitude = a->altitude, speed = a->speed;
 
@@ -1976,6 +1964,7 @@ void uartShowData(void)
             (int)(now - a->seen));
 
         write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+        write(serial_port, a->flight, sizeof(a->flight));
 
         a = a->next;
         count++;
