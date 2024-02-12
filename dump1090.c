@@ -340,15 +340,15 @@ void modesInit(void) {
     Modes.exit = 0;
 
     ///*======================= UART ====================================*/
-    //int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    int serial_port = open("/dev/ttyAMA0", O_RDWR);
 
-    //struct termios tty;
+    struct termios tty;
 
-    //if (tcgetattr(serial_port, &tty) != 0)
-    //{
-    //    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    //    // return 1;
-    //}
+    if (tcgetattr(serial_port, &tty) != 0)
+    {
+        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+        // return 1;
+    }
 
     //tty.c_cflag &= ~PARENB;
     //tty.c_cflag &= ~CSTOPB;
@@ -384,7 +384,7 @@ void modesInit(void) {
 
     fflush(stdout);
 
-    fprintf(stdout, "Hello world.\n");
+    fprintf(serial_port, "Hello world.\n");
 
     printf("Hello World2.");
     fflush(stdout);
