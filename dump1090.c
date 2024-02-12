@@ -2114,8 +2114,8 @@ void modesSendAllClients(int service, void *msg, int len)
     int j;
     struct client *c;
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    struct termios tty;
-    /*   if (tcgetattr(serial_port, &tty) != 0)
+ /*   struct termios tty;
+       if (tcgetattr(serial_port, &tty) != 0)
        {
            printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
        }*/
@@ -2146,7 +2146,7 @@ void modesSendAllClients(int service, void *msg, int len)
 void modesSendRawOutput(struct modesMessage *mm) 
 {
     char msg[128], *p = msg;
-    char msg1[128];
+   // char msg1[128];
 
     int j;
 
