@@ -2195,8 +2195,8 @@ void modesSendRawOutput(struct modesMessage *mm)
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
     }
 
-    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, msg, sizeof(msg));
+    unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+    write(serial_port, msg1, sizeof(msg1));
 
 
 
