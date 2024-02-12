@@ -2047,7 +2047,6 @@ void modesSendAllClients(int service, void *msg, int len)
     if (tcgetattr(serial_port, &tty) != 0)
     {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-        return 1;
     }
 
     tty.c_cflag &= ~PARENB;
@@ -2076,7 +2075,6 @@ void modesSendAllClients(int service, void *msg, int len)
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        return 1;
     }
 
 
