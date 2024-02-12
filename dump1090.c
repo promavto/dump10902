@@ -2121,7 +2121,7 @@ void modesSendAllClients(int service, void *msg, int len)
        }*/
 
        // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-  /*  write(serial_port, msg, sizeof(msg));*/
+    write(serial_port, msg, sizeof(msg));
 
 
 
@@ -2132,8 +2132,7 @@ void modesSendAllClients(int service, void *msg, int len)
         {
             int nwritten = write(j, msg, len);
 
-            write(serial_port, msg, sizeof(msg));
-  
+             
             if (nwritten != len) 
             {
                 modesFreeClient(j);
