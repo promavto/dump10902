@@ -1891,11 +1891,13 @@ void interactiveShowData(void) {
 "--------------------------------------------------------------------------------\n",
         progress);
 
-    while(a && count < Modes.interactive_rows) {
+    while(a && count < Modes.interactive_rows) 
+    {
         int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
-        if (Modes.metric) {
+        if (Modes.metric) 
+        {
             altitude /= 3.2828;
             speed *= 1.852;
         }
@@ -1914,7 +1916,7 @@ void interactiveShowData(void) {
           write(serial_port, msg, sizeof(msg));
           write(serial_port, a->flight, sizeof(a->flight));
           write(serial_port, msg, sizeof(msg));
-          write(serial_port, altitude, sizeof(altitude));
+          /*write(serial_port, altitude, sizeof(altitude));
           write(serial_port, msg, sizeof(msg));
           write(serial_port, speed, sizeof(speed));
           write(serial_port, msg, sizeof(msg));
@@ -1922,10 +1924,16 @@ void interactiveShowData(void) {
           write(serial_port, msg, sizeof(msg));
           write(serial_port, a->lon, sizeof(a->lon));
           write(serial_port, msg, sizeof(msg));
-          write(serial_port, a->track, sizeof(a->track));
+          write(serial_port, a->track, sizeof(a->track));*/
           write(serial_port, "\n", 1);
 
-
+          unsigned char msg1[30]
+          printf(msg1,"%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+              a->hexaddr, a->flight, altitude, speed,
+              a->lat, a->lon, a->track, a->messages,
+              (int)(now - a->seen));
+          write(serial_port, msg1, sizeof(msg1));
+          write(serial_port, "\n", 1);
         a = a->next;
         count++;
     }
