@@ -1973,8 +1973,8 @@ void uartShowData(void)
     //    "--------------------------------------------------------------------------------\n",
     //    progress);
 
-    while (a && count < Modes.uart_rows)
-    {
+  /*  while (a && count < Modes.uart_rows)
+    {*/
         int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
@@ -1994,7 +1994,7 @@ void uartShowData(void)
 
         a = a->next;
         count++;
-    }
+   // }
 }
 
 
