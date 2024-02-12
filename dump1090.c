@@ -180,6 +180,7 @@ struct {
     /* Interactive mode */
     struct aircraft *aircrafts;
     long long interactive_last_update;  /* Last screen update in milliseconds */
+    long long uart_last_update;        /* Last uart update in milliseconds */
 
     /* Statistics */
     long long stat_valid_preamble;
@@ -1612,7 +1613,7 @@ void useModesMessage(struct modesMessage *mm)
         }
         if (Modes.uart)
         {
-            struct aircraft* a = interactiveReceiveData(mm);
+           // struct aircraft* a = interactiveReceiveData(mm);
             //if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
 
@@ -1914,10 +1915,10 @@ void interactiveShowData(void)
 /* Показать текущие захваченные интерактивные данные на экране. */
 void uartShowData(void)
 {
-    struct aircraft* a = Modes.aircrafts;
+ /*   struct aircraft* a = Modes.aircrafts;
     time_t now = time(NULL);
     char progress[4];
-    int count = 0;
+    int count = 0;*/
 
 
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
