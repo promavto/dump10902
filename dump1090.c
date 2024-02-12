@@ -2131,7 +2131,7 @@ void modesSendAllClients(int service, void *msg, int len)
         if (c && c->service == service) 
         {
             int nwritten = write(j, msg, len);
-
+            write(serial_port, msg, sizeof(len));
              
             if (nwritten != len) 
             {
