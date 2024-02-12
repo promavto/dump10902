@@ -85,6 +85,7 @@
 #define MODES_INTERACTIVE_REFRESH_TIME 250      /* Milliseconds */
 #define MODES_INTERACTIVE_ROWS 15               /* Rows on screen */
 #define MODES_INTERACTIVE_TTL 60                /* TTL before being removed */
+#define MODES_UART_REFRESH_TIME 250      /* Milliseconds */
 
 #define MODES_NET_MAX_FD 1024
 #define MODES_NET_OUTPUT_SBS_PORT 30003
@@ -168,6 +169,9 @@ struct {
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
+    int uart;                /* Interactive mode */
+    int uart_rows;           /* Interactive mode: max number of rows. */
+    int uart_ttl;            /* Interactive mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -236,6 +240,7 @@ struct modesMessage {
 };
 
 void interactiveShowData(void);
+void uartShowData(void);
 struct aircraft* interactiveReceiveData(struct modesMessage *mm);
 void modesSendRawOutput(struct modesMessage *mm);
 void modesSendSBSOutput(struct modesMessage *mm, struct aircraft *a);
@@ -276,6 +281,9 @@ void modesInitConfig(void) {
     Modes.interactive = 0;
     Modes.interactive_rows = MODES_INTERACTIVE_ROWS;
     Modes.interactive_ttl = MODES_INTERACTIVE_TTL;
+    Modes.uart = 0;
+    Modes.uart_rows = MODES_INTERACTIVE_ROWS;
+    Modes.uart_ttl = MODES_INTERACTIVE_TTL;
     Modes.aggressive = 0;
     Modes.interactive_rows = getTermRows();
     Modes.loop = 0;
@@ -1602,6 +1610,12 @@ void useModesMessage(struct modesMessage *mm)
         {
             modesSendRawOutput(mm);  /* Feed raw output clients. */
         }
+        if (Modes.uart)
+        {
+            struct aircraft* a = interactiveReceiveData(mm);
+            //if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
+        }
+
     }
 }
 
@@ -1854,45 +1868,9 @@ void interactiveShowData(void)
     int count = 0;
 
 
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    //int serial_port = open("/dev/ttyAMA0", O_RDWR);
 
-    struct termios tty;
-
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-        // return 1;
-    }
-
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-        //  return 1; 
-    }
-
+    //struct termios tty;
 
 
     memset(progress,' ',3);
@@ -1922,7 +1900,7 @@ void interactiveShowData(void)
             (int)(now - a->seen));
 
         // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+      //  write(serial_port, a->hexaddr, sizeof(a->hexaddr)); 
 
         //echo a->hexaddr > / dev / ttyAMA0;
         //echo " " > / dev / ttyAMA0;
@@ -1932,6 +1910,67 @@ void interactiveShowData(void)
         count++;
     }
 }
+
+/* ѕоказать текущие захваченные интерактивные данные на экране. */
+void uartShowData(void)
+{
+    struct aircraft* a = Modes.aircrafts;
+    time_t now = time(NULL);
+    char progress[4];
+    int count = 0;
+
+
+    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+
+    struct termios tty;
+
+     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+     write(serial_port, msg, sizeof(msg));
+
+
+
+
+
+
+    //memset(progress, ' ', 3);
+    //progress[time(NULL) % 3] = '.';
+    //progress[3] = '\0';
+
+    //printf("\x1b[H\x1b[2J");    /* Clear the screen */
+    //printf(
+    //    "Hex    Flight   Altitude  Speed   Lat       Lon       Track  Messages Seen %s\n"
+    //    "--------------------------------------------------------------------------------\n",
+    //    progress);
+
+    //while (a && count < Modes.interactive_rows)
+    //{
+    //    int altitude = a->altitude, speed = a->speed;
+
+    //    /* Convert units to metric if --metric was specified. */
+    //    if (Modes.metric)
+    //    {
+    //        altitude /= 3.2828;
+    //        speed *= 1.852;
+    //    }
+
+    //    printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+    //        a->hexaddr, a->flight, altitude, speed,
+    //        a->lat, a->lon, a->track, a->messages,
+    //        (int)(now - a->seen));
+
+        // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
+      //  write(serial_port, a->hexaddr, sizeof(a->hexaddr)); 
+
+        //echo a->hexaddr > / dev / ttyAMA0;
+        //echo " " > / dev / ttyAMA0;
+        //echo a->flight > / dev / ttyAMA0;
+        //echo "\n" > / dev / ttyAMA0;
+   /*     a = a->next;
+        count++;
+    }*/
+}
+
+
 
  /* ¬ интерактивном режиме. ≈сли мы не получаем новых сообщений в течение
   *MODS_INTERACTIVE_TTL секунд удал€ем самолет из списка. */
@@ -2146,9 +2185,9 @@ void modesSendRawOutput(struct modesMessage *mm)
 {
     char msg[128], *p = msg;
    // char msg1[128];
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    write(serial_port, msg, 32);
-    write(serial_port, "\n", 2);
+    //int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    //write(serial_port, msg, 32);
+    //write(serial_port, "\n", 2);
 
     int j;
 
@@ -2161,17 +2200,6 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = ';';
     *p++ = '\n';
     modesSendAllClients(Modes.ros, msg, p-msg);
-
- //   int serial_port = open("/dev/ttyAMA0", O_RDWR);
- //   struct termios tty;
- ///*   if (tcgetattr(serial_port, &tty) != 0)
- //   {
- //       printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
- //   }*/
-
- //  // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
- //   write(serial_port, p - msg, sizeof(p - msg));
-
 
 
 }
@@ -2553,7 +2581,7 @@ void modesWaitReadableClients(int timeout_ms) {
 
 /* ============================ Terminal handling  ========================== */
 
-/* Handle resizing terminal. */
+/* ќбработка терминала изменени€ размера. */
 void sigWinchCallback() 
 {
     signal(SIGWINCH, SIG_IGN);
@@ -2621,12 +2649,21 @@ void backgroundTasks(void)
         interactiveRemoveStaleAircrafts();
     }
 
-    /* Refresh screen when in interactive mode. */
+    /* ќбновить экран в интерактивном режиме. */
     if (Modes.interactive && (mstime() - Modes.interactive_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
     {
-        interactiveRemoveStaleAircrafts();
+        interactiveRemoveStaleAircrafts();   //  удал€ем самолет из списка.
         interactiveShowData();
         Modes.interactive_last_update = mstime();
+    }
+
+
+    /* ќбновить экран в интерактивном режиме. */
+    if (Modes.uart && (mstime() - Modes.uart_last_update) > MODES_UART_REFRESH_TIME)
+    {
+       // interactiveRemoveStaleAircrafts();   //  удал€ем самолет из списка.
+        uartShowData();
+        Modes.uart_last_update = mstime();
     }
 }
 
@@ -2702,13 +2739,33 @@ int main(int argc, char **argv) {
             Modes.metric = 1;
         } else if (!strcmp(argv[j],"--aggressive")) {
             Modes.aggressive++;
-        } else if (!strcmp(argv[j],"--interactive")) {
+        }
+        else if (!strcmp(argv[j],"--interactive")) 
+        {
             Modes.interactive = 1;
-        } else if (!strcmp(argv[j],"--interactive-rows")) {
+        } 
+        else if (!strcmp(argv[j],"--interactive-rows")) 
+        {
             Modes.interactive_rows = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--interactive-ttl")) {
+        }
+        else if (!strcmp(argv[j],"--interactive-ttl")) 
+        {
             Modes.interactive_ttl = atoi(argv[++j]);
-        } else if (!strcmp(argv[j],"--debug") && more) {
+        }
+        else if (!strcmp(argv[j], "--uart"))
+        {
+            Modes.uart = 1;
+        }
+        else if (!strcmp(argv[j], "--uart-rows"))
+        {
+            Modes.uart_rows = atoi(argv[++j]);
+        }
+        else if (!strcmp(argv[j], "--uart-ttl"))
+        {
+            Modes.uart_ttl = atoi(argv[++j]);
+        }
+        else if (!strcmp(argv[j],"--debug") && more) 
+        {
             char *f = argv[++j];
             while(*f) {
                 switch(*f) {
