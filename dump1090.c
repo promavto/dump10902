@@ -1917,7 +1917,7 @@ void uartShowData(void)
 {
     struct aircraft* a = Modes.aircrafts;
    // time_t now = time(NULL);
-    char progress[4];
+   // char progress[4];
     int count = 0;
 
 
