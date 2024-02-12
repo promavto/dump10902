@@ -2113,7 +2113,7 @@ void modesSendAllClients(int service, void *msg, int len)
 {
     int j;
     struct client *c;
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+ /*   int serial_port = open("/dev/ttyAMA0", O_RDWR);*/
  /*   struct termios tty;
        if (tcgetattr(serial_port, &tty) != 0)
        {
@@ -2122,7 +2122,7 @@ void modesSendAllClients(int service, void *msg, int len)
 
        // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
    // write(serial_port, msg, sizeof(len));
-    write(serial_port, "LEN= "+ (char)len, 10);
+ //   write(serial_port, "LEN= "+ (char)len, 10);
 
 
     for (j = 0; j <= Modes.maxfd; j++) 
@@ -2146,6 +2146,9 @@ void modesSendRawOutput(struct modesMessage *mm)
 {
     char msg[128], *p = msg;
    // char msg1[128];
+    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    write(serial_port, msg, 32);
+    write(serial_port, "\n", 2);
 
     int j;
 
