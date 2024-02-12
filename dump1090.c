@@ -384,8 +384,8 @@ void modesInit(void) {
 
     fflush(stdout);
 
-    fprintf(serial_port, "Hello world.\n");
-
+   // fprintf(serial_port, "Hello world.\n");
+    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
     printf("Hello World2.");
     fflush(stdout);
 
