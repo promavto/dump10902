@@ -169,9 +169,9 @@ struct {
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
-    int uart;                /* Interactive mode */
-    int uart_rows;           /* Interactive mode: max number of rows. */
-    int uart_ttl;            /* Interactive mode: TTL before deletion. */
+    int uart;                       /* Interactive mode */
+    int uart_rows;                  /* Interactive mode: max number of rows. */
+    int uart_ttl;                   /* Interactive mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -1915,10 +1915,10 @@ void interactiveShowData(void)
 /* ѕоказать текущие захваченные интерактивные данные на экране. */
 void uartShowData(void)
 {
- /*   struct aircraft* a = Modes.aircrafts;
-    time_t now = time(NULL);
+    struct aircraft* a = Modes.aircrafts;
+   // time_t now = time(NULL);
     char progress[4];
-    int count = 0;*/
+    int count = 0;
 
 
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
@@ -1958,8 +1958,8 @@ void uartShowData(void)
         // return 1;
     }
 
-     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\n' };
-     write(serial_port, msg, sizeof(msg));
+ /*    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\n' };
+     write(serial_port, msg, sizeof(msg));*/
 
 
 
@@ -1973,32 +1973,28 @@ void uartShowData(void)
     //    "--------------------------------------------------------------------------------\n",
     //    progress);
 
-    //while (a && count < Modes.interactive_rows)
-    //{
-    //    int altitude = a->altitude, speed = a->speed;
+    while (a && count < Modes.uart_rows)
+    {
+        int altitude = a->altitude, speed = a->speed;
 
-    //    /* Convert units to metric if --metric was specified. */
-    //    if (Modes.metric)
-    //    {
-    //        altitude /= 3.2828;
-    //        speed *= 1.852;
-    //    }
+        /* Convert units to metric if --metric was specified. */
+        if (Modes.metric)
+        {
+            altitude /= 3.2828;
+            speed *= 1.852;
+        }
 
     //    printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
     //        a->hexaddr, a->flight, altitude, speed,
     //        a->lat, a->lon, a->track, a->messages,
     //        (int)(now - a->seen));
 
-        // unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-      //  write(serial_port, a->hexaddr, sizeof(a->hexaddr)); 
+        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
 
-        //echo a->hexaddr > / dev / ttyAMA0;
-        //echo " " > / dev / ttyAMA0;
-        //echo a->flight > / dev / ttyAMA0;
-        //echo "\n" > / dev / ttyAMA0;
-   /*     a = a->next;
+
+        a = a->next;
         count++;
-    }*/
+    }
 }
 
 
@@ -2692,7 +2688,7 @@ void backgroundTasks(void)
     /* ќбновить экран в интерактивном режиме. */
     if (Modes.uart && (mstime() - Modes.uart_last_update) > MODES_UART_REFRESH_TIME)
     {
-       // interactiveRemoveStaleAircrafts();   //  удал€ем самолет из списка.
+        interactiveRemoveStaleAircrafts();   //  удал€ем самолет из списка.
         uartShowData();
         Modes.uart_last_update = mstime();
     }
