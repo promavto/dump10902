@@ -1613,8 +1613,8 @@ void useModesMessage(struct modesMessage *mm)
         }
         if (Modes.uart)
         {
-           // struct aircraft* a = interactiveReceiveData(mm);
-            //if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
+            struct aircraft* a = interactiveReceiveData(mm);
+            if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
 
     }
@@ -1991,9 +1991,9 @@ void uartShowData(void)
      write(serial_port, msg, sizeof(msg));*/
 
 
-    while (a /*&& count < Modes.uart_rows*/)
+    while (a && count < 15/*Modes.uart_rows*/)
     {
-        int altitude = a->altitude, speed = a->speed;
+      //  int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
         if (Modes.metric)
@@ -2002,10 +2002,10 @@ void uartShowData(void)
             speed *= 1.852;
         }
 
-        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-            a->hexaddr, a->flight, altitude, speed,
-            a->lat, a->lon, a->track, a->messages,
-            (int)(now - a->seen));
+        //printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+        //    a->hexaddr, a->flight, altitude, speed,
+        //    a->lat, a->lon, a->track, a->messages,
+        //    (int)(now - a->seen));
 
         write(serial_port, a->hexaddr, sizeof(a->hexaddr));
         write(serial_port, a->flight, sizeof(a->flight));
