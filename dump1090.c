@@ -2340,15 +2340,15 @@ void modesSendRawOutput(struct modesMessage *mm)
 
 
 
-    if (write(serial_port, p, sizeof(p)) != sizeof(p))
-    {
-        //free(p1);
-    }
+    //if (write(serial_port, p, sizeof(p)) != sizeof(p))
+    //{
+    //    //free(p1);
+    //}
  /*   free(content);*/
 
 
 
-
+    write(serial_port, p, sizeof(p));
 
     modesSendAllClients(Modes.ros, msg, p-msg);
 
