@@ -2277,8 +2277,8 @@ void modesSendRawOutput(struct modesMessage *mm)
     char msg[128], *p = msg;
    // char msg1[128];
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    write(serial_port, msg, 32);
-    write(serial_port, "\n", 2);
+   // write(serial_port, msg, 32);
+   // write(serial_port, "\n", 2);
 
     int j;
 
