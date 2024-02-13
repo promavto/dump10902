@@ -45,9 +45,6 @@
 #include <sys/select.h>
 #include "rtl-sdr.h"
 #include "anet.h"
-#include <termios.h>
-
-
 
 #define MODES_DEFAULT_RATE         2000000
 #define MODES_DEFAULT_FREQ         1090000000
@@ -85,7 +82,6 @@
 #define MODES_INTERACTIVE_REFRESH_TIME 250      /* Milliseconds */
 #define MODES_INTERACTIVE_ROWS 15               /* Rows on screen */
 #define MODES_INTERACTIVE_TTL 60                /* TTL before being removed */
-#define MODES_UART_REFRESH_TIME 250      /* Milliseconds */
 
 #define MODES_NET_MAX_FD 1024
 #define MODES_NET_OUTPUT_SBS_PORT 30003
@@ -97,7 +93,7 @@
 
 #define MODES_NOTUSED(V) ((void) V)
 
- /* Структура, используемая для описания сетевого клиента. */
+/* Structure used to describe a networking client. */
 struct client {
     int fd;         /* File descriptor. */
     int service;    /* TCP port the client is connected to. */
@@ -105,7 +101,7 @@ struct client {
     int buflen;                         /* Amount of data on buffer. */
 };
 
-/* Структура, используемая для описания самолета в интерактивном режиме. */
+/* Structure used to describe an aircraft in iteractive mode. */
 struct aircraft {
     uint32_t addr;      /* ICAO address */
     char hexaddr[7];    /* Printable ICAO address */
@@ -121,9 +117,9 @@ struct aircraft {
     int odd_cprlon;
     int even_cprlat;
     int even_cprlon;
-    double lat, lon;    /* Координаты получены из данных, закодированных CPR. */
+    double lat, lon;    /* Coordinated obtained from CPR encoded data. */
     long long odd_cprtime, even_cprtime;
-    struct aircraft *next; /* Следующий самолет в нашем связанном списке. */
+    struct aircraft *next; /* Next aircraft in our linked list. */
 };
 
 /* Program global state. */
@@ -151,7 +147,7 @@ struct {
     /* Networking */
     char aneterr[ANET_ERR_LEN];
     struct client *clients[MODES_NET_MAX_FD]; /* Our clients. */
-    int maxfd;                      /* Самый большой FD, активный в данный момент. */
+    int maxfd;                      /* Greatest fd currently active. */
     int sbsos;                      /* SBS output listening socket. */
     int ros;                        /* Raw output listening socket. */
     int ris;                        /* Raw input listening socket. */
@@ -166,14 +162,9 @@ struct {
     int debug;                      /* Debugging mode. */
     int net;                        /* Enable networking. */
     int net_only;                   /* Enable just networking. */
-    int uart_net;                   /* Enable networking. */
-    int uart_net_only;              /* Enable just networking. */
     int interactive;                /* Interactive mode */
     int interactive_rows;           /* Interactive mode: max number of rows. */
     int interactive_ttl;            /* Interactive mode: TTL before deletion. */
-    int uart;                       /* Interactive mode */
-    int uart_rows;                  /* Interactive mode: max number of rows. */
-    int uart_ttl;                   /* Interactive mode: TTL before deletion. */
     int stats;                      /* Print stats at exit in --ifile mode. */
     int onlyaddr;                   /* Print only ICAO addresses. */
     int metric;                     /* Use metric units. */
@@ -182,7 +173,6 @@ struct {
     /* Interactive mode */
     struct aircraft *aircrafts;
     long long interactive_last_update;  /* Last screen update in milliseconds */
-    long long uart_last_update;        /* Last uart update in milliseconds */
 
     /* Statistics */
     long long stat_valid_preamble;
@@ -243,7 +233,6 @@ struct modesMessage {
 };
 
 void interactiveShowData(void);
-void uartShowData(void);
 struct aircraft* interactiveReceiveData(struct modesMessage *mm);
 void modesSendRawOutput(struct modesMessage *mm);
 void modesSendSBSOutput(struct modesMessage *mm, struct aircraft *a);
@@ -279,16 +268,11 @@ void modesInitConfig(void) {
     Modes.raw = 0;
     Modes.net = 0;
     Modes.net_only = 0;
-    Modes.uart_net = 0;
-    Modes.uart_net_only = 0;
     Modes.onlyaddr = 0;
     Modes.debug = 0;
     Modes.interactive = 0;
     Modes.interactive_rows = MODES_INTERACTIVE_ROWS;
     Modes.interactive_ttl = MODES_INTERACTIVE_TTL;
-    Modes.uart = 0;
-    Modes.uart_rows = MODES_INTERACTIVE_ROWS;
-    Modes.uart_ttl = MODES_INTERACTIVE_TTL;
     Modes.aggressive = 0;
     Modes.interactive_rows = getTermRows();
     Modes.loop = 0;
@@ -299,15 +283,15 @@ void modesInit(void) {
 
     pthread_mutex_init(&Modes.data_mutex,NULL);
     pthread_cond_init(&Modes.data_cond,NULL);
-    /* Мы добавляем полное сообщение минус последний бит в длину, так что мы
-    * может нести оставшуюся часть буфера, которую мы не можем обработать
-    * В цикле обнаружения сообщений, в начале следующих данных
-    * обрабатывать. Таким образом, мы можем также обнаружить пересечение сообщений
-    * Два читают. */
+    /* We add a full message minus a final bit to the length, so that we
+     * can carry the remaining part of the buffer that we can't process
+     * in the message detection loop, back at the start of the next data
+     * to process. This way we are able to also detect messages crossing
+     * two reads. */
     Modes.data_len = MODES_DATA_LEN + (MODES_FULL_LEN-1)*4;
     Modes.data_ready = 0;
-    /* Выделите кеш адреса ICAO. Мы используем два uint32_t для каждого
-    * Вход, потому что это пара Addr / TimeStamp для каждой записи. */
+    /* Allocate the ICAO address cache. We use two uint32_t for every
+     * entry because it's a addr / timestamp pair for every entry. */
     Modes.icao_cache = malloc(sizeof(uint32_t)*MODES_ICAO_CACHE_LEN*2);
     memset(Modes.icao_cache,0,sizeof(uint32_t)*MODES_ICAO_CACHE_LEN*2);
     Modes.aircrafts = NULL;
@@ -319,19 +303,19 @@ void modesInit(void) {
     }
     memset(Modes.data,127,Modes.data_len);
 
-    /* Заполните таблицу поиска i/q ->. Это используется потому, что
-    * SQRT или раунд может быть дорогим, а производительность может сильно различаться
-    * В зависимости от используемого LIBC.
-    *
-    * Обратите внимание, что нам не нужно заполнять таблицу для отрицательных значений, как
-    * Мы квадрат как I, так и Q, чтобы взять величину. Итак, максимальный абсолютный
-    * Значение I и Q равно 128, таким образом, максимальная величина, которую мы получаем:
-    *
-    *SQRT (128*128+128*128) = ~ 181,02
-    *
-    * Затем, чтобы сохранить полное разрешение и иметь возможность различать между
-    * Каждая пара значений I/Q, мы масштабируем этот диапазон от диапазона плавания
-    * 0-181 в диапазоне UINT16_T 0-65536, умножившись на 360. */
+    /* Populate the I/Q -> Magnitude lookup table. It is used because
+     * sqrt or round may be expensive and performance may vary a lot
+     * depending on the libc used.
+     *
+     * Note that we don't need to fill the table for negative values, as
+     * we square both i and q to take the magnitude. So the maximum absolute
+     * value of i and q is 128, thus the maximum magnitude we get is:
+     *
+     * sqrt(128*128+128*128) = ~181.02
+     *
+     * Then, to retain the full resolution and be able to distinguish among
+     * every pair of I/Q values, we scale this range from the float range
+     * 0-181 to the uint16_t range of 0-65536 by multiplying for 360. */
     Modes.maglut = malloc(129*129*2);
     for (i = 0; i <= 128; i++) {
         for (q = 0; q <= 128; q++) {
@@ -351,47 +335,6 @@ void modesInit(void) {
     Modes.stat_sbs_connections = 0;
     Modes.stat_out_of_phase = 0;
     Modes.exit = 0;
-
-    ///*======================= UART ====================================*/
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    struct termios tty;
-
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
-    /* настройки порта */
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B115200);
-    cfsetospeed(&tty, B115200);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
-    {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    }
-    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-    write(serial_port, msg, sizeof(msg));
-
 }
 
 /* =============================== RTLSDR handling ========================== */
@@ -633,18 +576,18 @@ void dumpRawMessageJS(char *descr, unsigned char *msg,
     fclose(fp);
 }
 
-/* Это оболочка для dumpMagnitudeVector(), которая также отображает сообщение
-  * в шестнадцатеричном формате с дополнительным описанием.
-  *
-  * descr — дополнительное сообщение, описывающее дамп.
-  * msg указывает на декодированное сообщение
-  * m — исходный вектор магнитуды
-  * offset — это смещение, с которого начинается сообщение.
-  *
-  * Функция также создает файл Javascript, используемый debug.html для
-  * отображать пакеты в графическом формате, если вывод Javascript был
-  * включено.
-  */
+/* This is a wrapper for dumpMagnitudeVector() that also show the message
+ * in hex format with an additional description.
+ *
+ * descr  is the additional message to show to describe the dump.
+ * msg    points to the decoded message
+ * m      is the original magnitude vector
+ * offset is the offset where the message starts
+ *
+ * The function also produces the Javascript file used by debug.html to
+ * display packets in a graphical format if the Javascript output was
+ * enabled.
+ */
 void dumpRawMessage(char *descr, unsigned char *msg,
                     uint16_t *m, uint32_t offset)
 {
@@ -1596,13 +1539,10 @@ good_preamble:
                     mm.phase_corrected = 1;
             }
 
-            /* Передаем данные на следующий уровень */
+            /* Pass data to the next layer */
             useModesMessage(&mm);
-        }
-        else 
-        {
-            if (Modes.debug & MODES_DEBUG_DEMODERR && use_correction) 
-            {
+        } else {
+            if (Modes.debug & MODES_DEBUG_DEMODERR && use_correction) {
                 printf("The following message has %d demod errors\n", errors);
                 dumpRawMessage("Demodulated with errors", msg, m, j);
             }
@@ -1618,54 +1558,38 @@ good_preamble:
     }
 }
 
-/* Когда доступно новое сообщение, потому что оно было декодировано из
-  * Устройство RTL, файл или полученное в входном порту TCP или в любом другом
-  * Способ, которым мы можем получить декодированное сообщение, мы называем эту функцию в порядке
-  * Использовать сообщение.
-  *
-  * В основном эта функция передает необработанное сообщение в верхние слои для
-  * Дальнейшая обработка и визуализация. */
-void useModesMessage(struct modesMessage *mm) 
-{
-    if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) 
-    {
-        /* Отслеживать самолеты в интерактивном режиме или если HTTP
-        * Интерфейс включен. */
-        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) 
-        {
+/* When a new message is available, because it was decoded from the
+ * RTL device, file, or received in the TCP input port, or any other
+ * way we can receive a decoded message, we call this function in order
+ * to use the message.
+ *
+ * Basically this function passes a raw message to the upper layers for
+ * further processing and visualization. */
+void useModesMessage(struct modesMessage *mm) {
+    if (!Modes.stats && (Modes.check_crc == 0 || mm->crcok)) {
+        /* Track aircrafts in interactive mode or if the HTTP
+         * interface is enabled. */
+        if (Modes.interactive || Modes.stat_http_requests > 0 || Modes.stat_sbs_connections > 0) {
             struct aircraft *a = interactiveReceiveData(mm);
             if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
         }
-        /* Неинтерактивно, отображать сообщения на стандартном выводе. */
-        if (!Modes.interactive) 
-        {
+        /* In non-interactive way, display messages on standard output. */
+        if (!Modes.interactive) {
             displayModesMessage(mm);
             if (!Modes.raw && !Modes.onlyaddr) printf("\n");
         }
-        /* Отправить данные подключенным клиентам. */
-        if (Modes.net) 
-        {
+        /* Send data to connected clients. */
+        if (Modes.net) {
             modesSendRawOutput(mm);  /* Feed raw output clients. */
         }
-        /* Отправить данные подключенным клиентам. */
-        if (Modes.uart_net)
-        {
-            modesSendRawOutput(mm);  /* Feed raw output clients. */
-        }
-        if (Modes.uart)
-        {
-            struct aircraft* a = interactiveReceiveData(mm);
-            if (a && Modes.stat_sbs_connections > 0) modesSendSBSOutput(mm, a);  /* Feed SBS output clients. */
-        }
-
     }
 }
 
 /* ========================= Interactive mode =============================== */
 
-/* Вернуть новую структуру самолета для связанного списка интерактивного режима самолетов. */
-struct aircraft *interactiveCreateAircraft(uint32_t addr) 
-{
+/* Return a new aircraft structure for the interactive mode linked list
+ * of aircrafts. */
+struct aircraft *interactiveCreateAircraft(uint32_t addr) {
     struct aircraft *a = malloc(sizeof(*a));
 
     a->addr = addr;
@@ -1688,9 +1612,9 @@ struct aircraft *interactiveCreateAircraft(uint32_t addr)
     return a;
 }
 
-/* Вернуть самолет с указанным адресом или NULL, если нет самолета с этим адресом. */
-struct aircraft *interactiveFindAircraft(uint32_t addr) 
-{
+/* Return the aircraft with the specified address, or NULL if no aircraft
+ * exists with this address. */
+struct aircraft *interactiveFindAircraft(uint32_t addr) {
     struct aircraft *a = Modes.aircrafts;
 
     while(a) {
@@ -1707,7 +1631,7 @@ int cprModFunction(int a, int b) {
     return res;
 }
 
-/*Функция NL использует предварительную таблицу из 1090 - WP - 9 - 14 */
+/* The NL function uses the precomputed table from 1090-WP-9-14 */
 int cprNLFunction(double lat) {
     if (lat < 0) lat = -lat; /* Table is simmetric about the equator. */
     if (lat < 10.47047130) return 59;
@@ -1829,34 +1753,29 @@ void decodeCPR(struct aircraft *a) {
     if (a->lon > 180) a->lon -= 360;
 }
 
-/* Получаем новые сообщения и заполняем интерактивный режим дополнительной информацией. */
-struct aircraft *interactiveReceiveData(struct modesMessage *mm) 
-{
+/* Receive new messages and populate the interactive mode with more info. */
+struct aircraft *interactiveReceiveData(struct modesMessage *mm) {
     uint32_t addr;
     struct aircraft *a, *aux;
 
     if (Modes.check_crc && mm->crcok == 0) return NULL;
     addr = (mm->aa1 << 16) | (mm->aa2 << 8) | mm->aa3;
 
-    /* Lookup наш самолет или создайте новый. */
+    /* Loookup our aircraft or create a new one. */
     a = interactiveFindAircraft(addr);
-    if (!a) 
-    {
+    if (!a) {
         a = interactiveCreateAircraft(addr);
         a->next = Modes.aircrafts;
         Modes.aircrafts = a;
-    }
-    else 
-    {
-       /* Если это уже известный самолет, переместите его на голову
-        * Таким образом, мы поддерживаем самолеты, заказанные по получению времени сообщения.
-        *
-        * Однако переместите его на голову, только если бы по крайней мере одна секунда прошла
-        * Поскольку самолет, который в настоящее время находится на голове, отправил сообщение,
-        * отлично с несколькими самолетами одновременно у нас
-        * Бесполезный перетасовки позиций на экране. */
-        if (0 && Modes.aircrafts != a && (time(NULL) - a->seen) >= 1) 
-        {
+    } else {
+        /* If it is an already known aircraft, move it on head
+         * so we keep aircrafts ordered by received message time.
+         *
+         * However move it on head only if at least one second elapsed
+         * since the aircraft that is currently on head sent a message,
+         * othewise with multiple aircrafts at the same time we have an
+         * useless shuffle of positions on the screen. */
+        if (0 && Modes.aircrafts != a && (time(NULL) - a->seen) >= 1) {
             aux = Modes.aircrafts;
             while(aux->next != a) aux = aux->next;
             /* Now we are a node before the aircraft to remove. */
@@ -1901,53 +1820,12 @@ struct aircraft *interactiveReceiveData(struct modesMessage *mm)
     return a;
 }
 
-/* Показать текущие захваченные интерактивные данные на экране. */
-void interactiveShowData(void) 
-{
+/* Show the currently captured interactive data on screen. */
+void interactiveShowData(void) {
     struct aircraft *a = Modes.aircrafts;
     time_t now = time(NULL);
     char progress[4];
     int count = 0;
-
-
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-
-    struct termios tty;
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
-
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
-    {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    }
-
-
 
     memset(progress,' ',3);
     progress[time(NULL)%3] = '.';
@@ -1959,13 +1837,11 @@ void interactiveShowData(void)
 "--------------------------------------------------------------------------------\n",
         progress);
 
-    while(a && count < Modes.interactive_rows) 
-    {
+    while(a && count < Modes.interactive_rows) {
         int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
-        if (Modes.metric) 
-        {
+        if (Modes.metric) {
             altitude /= 3.2828;
             speed *= 1.852;
         }
@@ -1974,105 +1850,20 @@ void interactiveShowData(void)
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
-
- /*       write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-        write(serial_port, "/", sizeof("/"));
-        write(serial_port, a->flight, sizeof(a->flight));*/
-
         a = a->next;
         count++;
     }
 }
 
-/* Показать текущие захваченные интерактивные данные на экране. */
-void uartShowData(void)
-{
-    struct aircraft* a = Modes.aircrafts;
-    time_t now = time(NULL);
-    int count = 0;
-
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
-
-    struct termios tty;
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
-
-    /* настройки порта */
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B115200);
-    cfsetospeed(&tty, B115200);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0) 
-    {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    }
-
- /*    unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\n' };
-     write(serial_port, msg, sizeof(msg));*/
-
-
-    while (a && count < 15/*Modes.uart_rows*/)
-    {
-        int altitude = a->altitude, speed = a->speed;
-
-        /* Convert units to metric if --metric was specified. */
-        if (Modes.metric)
-        {
-            altitude /= 3.2828;
-            speed *= 1.852;
-        }
-
-        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-            a->hexaddr, a->flight, altitude, speed,
-            a->lat, a->lon, a->track, a->messages,
-            (int)(now - a->seen));
-
-        //write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-        //write(serial_port, " / ", sizeof(" / "));
-        //write(serial_port, a->flight, sizeof(a->flight));
-        //write(serial_port, "\n", sizeof("\n"));
- 
-        a = a->next;
-        count++;
-    }
-}
-
-
-
- /* В интерактивном режиме. Если мы не получаем новых сообщений в течение
-  *MODS_INTERACTIVE_TTL секунд удаляем самолет из списка. */
-void interactiveRemoveStaleAircrafts(void) 
-{
+/* When in interactive mode If we don't receive new nessages within
+ * MODES_INTERACTIVE_TTL seconds we remove the aircraft from the list. */
+void interactiveRemoveStaleAircrafts(void) {
     struct aircraft *a = Modes.aircrafts;
     struct aircraft *prev = NULL;
     time_t now = time(NULL);
 
-    while(a) 
-    {
-        if ((now - a->seen) > Modes.interactive_ttl) 
-        {
+    while(a) {
+        if ((now - a->seen) > Modes.interactive_ttl) {
             struct aircraft *next = a->next;
             /* Remove the element from the linked list, with care
              * if we are removing the first element. */
@@ -2082,9 +1873,7 @@ void interactiveRemoveStaleAircrafts(void)
             else
                 prev->next = next;
             a = next;
-        }
-        else
-        {
+        } else {
             prev = a;
             a = a->next;
         }
@@ -2093,39 +1882,35 @@ void interactiveRemoveStaleAircrafts(void)
 
 /* ============================== Snip mode ================================= */
 
- /* Получите необработанные образцы IQ и отфильтруйте все <, чем указанный уровень
-  * Для более чем 256 образцов, чтобы уменьшить размер примера файла. */
-void snipMode(int level) 
-{
+/* Get raw IQ samples and filter everything is < than the specified level
+ * for more than 256 samples in order to reduce example file size. */
+void snipMode(int level) {
     int i, q;
     long long c = 0;
 
-    while ((i = getchar()) != EOF && (q = getchar()) != EOF) 
-    {
-        if (abs(i-127) < level && abs(q-127) < level) 
-        {
+    while ((i = getchar()) != EOF && (q = getchar()) != EOF) {
+        if (abs(i-127) < level && abs(q-127) < level) {
             c++;
             if (c > MODES_PREAMBLE_US*4) continue;
-        }
-        else 
-        {
+        } else {
             c = 0;
         }
         putchar(i);
         putchar(q);
     }
 }
- /* =========================== Сеть =================================================== ===============
-  * ПРИМЕЧАНИЕ: Здесь мы завоевываем любую хорошую практику кодирования в пользу
-  * Чрезвычайная простота, то есть:
-  *
-  * 1) Мы полагаемся только на буферы ядра для нашего ввода -вывода без какого -либо вида
-  * Пользовательский пространство буферизация.
-  * 2) Время от времени мы не регистрируем какого -либо обработчика событий
-  * Функция вызывается, и мы принимаем новые соединения. Все остальное
-  * обрабатывается с помощью не блокирующего ввода-вывода и вручную тянуть клиентов, чтобы увидеть, если
-  * У них есть что -то новое, чтобы поделиться с нами, когда нужно чтение.
-  */
+
+/* ============================= Networking =================================
+ * Note: here we risregard any kind of good coding practice in favor of
+ * extreme simplicity, that is:
+ *
+ * 1) We only rely on the kernel buffers for our I/O without any kind of
+ *    user space buffering.
+ * 2) We don't register any kind of event handler, from time to time a
+ *    function gets called and we accept new connections. All the rest is
+ *    handled via non-blocking I/O and manually pulling clients to see if
+ *    they have something new to share with us when reading is needed.
+ */
 
 #define MODES_NET_SERVICE_RAWO 0
 #define MODES_NET_SERVICE_RAWI 1
@@ -2143,9 +1928,8 @@ struct {
     {"Basestation TCP output", &Modes.sbsos, MODES_NET_OUTPUT_SBS_PORT}
 };
 
-/* Инициализация сети «стека». */
-void modesInitNet(void) 
-{
+/* Networking "stack" initialization. */
+void modesInitNet(void) {
     int j;
 
     memset(Modes.clients,0,sizeof(Modes.clients));
@@ -2167,28 +1951,25 @@ void modesInitNet(void)
     signal(SIGPIPE, SIG_IGN);
 }
 
- /* Эта функция время от времени вызывается, когда поток декодирования
-  * Пробуждено новыми данными, прибывающими. Это обычно случается несколько раз каждый второй. */
-void modesAcceptClients(void) 
-{
+/* This function gets called from time to time when the decoding thread is
+ * awakened by new data arriving. This usually happens a few times every
+ * second. */
+void modesAcceptClients(void) {
     int fd, port;
     unsigned int j;
     struct client *c;
 
-    for (j = 0; j < MODES_NET_SERVICES_NUM; j++) 
-    {
+    for (j = 0; j < MODES_NET_SERVICES_NUM; j++) {
         fd = anetTcpAccept(Modes.aneterr, *modesNetServices[j].socket,
                            NULL, &port);
-        if (fd == -1) 
-        {
+        if (fd == -1) {
             if (Modes.debug & MODES_DEBUG_NET && errno != EAGAIN)
                 printf("Accept %d: %s\n", *modesNetServices[j].socket,
                        strerror(errno));
             continue;
         }
 
-        if (fd >= MODES_NET_MAX_FD) 
-        {
+        if (fd >= MODES_NET_MAX_FD) {
             close(fd);
             return; /* Max number of clients reached. */
         }
@@ -2212,9 +1993,8 @@ void modesAcceptClients(void)
     }
 }
 
-/* При ошибке бесплатно клиенту, соберите структуру, при необходимости отрегулируйте MAXFD. */
-void modesFreeClient(int fd) 
-{
+/* On error free the client, collect the structure, adjust maxfd if needed. */
+void modesFreeClient(int fd) {
     close(fd);
     free(Modes.clients[fd]);
     Modes.clients[fd] = NULL;
@@ -2222,9 +2002,9 @@ void modesFreeClient(int fd)
     if (Modes.debug & MODES_DEBUG_NET)
         printf("Closing client %d\n", fd);
 
-    /* Если это был наш MaxFD, сканируйте массив клиентов, чтобы найти новый макс.
-    * Обратите внимание, что мы уверены, что нет активного FD больше, чем закрытый
-    * fd, поэтому мы сканируем с FD-1 до 0. */
+    /* If this was our maxfd, scan the clients array to find the new max.
+     * Note that we are sure there is no active fd greater than the closed
+     * fd, so we scan from fd-1 to 0. */
     if (Modes.maxfd == fd) {
         int j;
 
@@ -2238,32 +2018,28 @@ void modesFreeClient(int fd)
     }
 }
 
-/* Отправьте указанное сообщение всем клиентам, слушающим данную службу. */
-void modesSendAllClients(int service, void *msg, int len) 
-{
+/* Send the specified message to all clients listening for a given service. */
+void modesSendAllClients(int service, void *msg, int len) {
     int j;
     struct client *c;
- 
-    for (j = 0; j <= Modes.maxfd; j++) 
-    {
+
+    for (j = 0; j <= Modes.maxfd; j++) {
         c = Modes.clients[j];
-        if (c && c->service == service) 
-        {
+        if (c && c->service == service) {
             int nwritten = write(j, msg, len);
-           
-            if (nwritten != len) 
-            {
+            if (nwritten != len) {
                 modesFreeClient(j);
             }
         }
     }
 }
 
-/* Напишите необработанные результаты для клиентов TCP. */
+/* Write raw output to TCP clients. */
 void modesSendRawOutput(struct modesMessage *mm) 
 {
     char msg[128], *p = msg;
-   // char msg1[128], *p1 = msg1;
+    int j;
+
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
     struct termios tty;
 
@@ -2301,11 +2077,8 @@ void modesSendRawOutput(struct modesMessage *mm)
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     }
 
-    int j;
-   // int j1;
-
     *p++ = '*';
-    for (j = 0; j < mm->msgbits/8; j++)  
+    for (j = 0; j < mm->msgbits/8; j++) 
     {
         sprintf(p, "%02X", mm->msg[j]);
         p += 2;
@@ -2313,36 +2086,10 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = ';';
     *p++ = '\n';
 
- /*   write(serial_port, p, 24);
-    write(serial_port, "\n", 1);*/
-
- /*   *p1++ = '*';
-    for (j1 = 0; j1 < mm->msgbits / 8; j1++)
-    {
-        sprintf(p1, "%02X", mm->msg1[j1]);
-        p1 += 2;
-    }
-    *p1++ = ';';
-    *p1++ = '\n';*/
-
-
-
-
-    //if (write(serial_port, p, sizeof(p)) != sizeof(p))
-    //{
-    //    //free(p1);
-    //}
- /*   free(content);*/
-
-
-
     write(serial_port, msg, p - msg);
 
     modesSendAllClients(Modes.ros, msg, p-msg);
-
-
 }
-
 
 
 /* Write SBS output to TCP clients. */
@@ -2408,21 +2155,20 @@ int hexDigitVal(int c) {
     else return -1;
 }
 
-/* Эта функция декодирует строку, представляющую сообщение режима S в
-  * необработанный шестнадцатеричный формат, например: *8D4B969699155600E87406F5B69F;
-  * Предполагается, что строка должна находиться в начале клиентского буфера.
-  * и завершается нулем.
-  *
-  * Сообщение передается на уровни более высокого уровня, поэтому оно передается
-  * выбранный выход на экран, сетевой выход и т. д.
-  *
-  * Если сообщение выглядит недействительным, оно автоматически удаляется.
-  *
-  * Функция всегда возвращает 0 (успех) вызывающей стороне, поскольку
-  * нет случая, когда мы хотим, чтобы неработающие сообщения закрывали клиент
-  * связь. */
-int decodeHexMessage(struct client *c) 
-{
+/* This function decodes a string representing a Mode S message in
+ * raw hex format like: *8D4B969699155600E87406F5B69F;
+ * The string is supposed to be at the start of the client buffer
+ * and null-terminated.
+ * 
+ * The message is passed to the higher level layers, so it feeds
+ * the selected screen output, the network output and so forth.
+ * 
+ * If the message looks invalid is silently discarded.
+ *
+ * The function always returns 0 (success) to the caller as there is
+ * no case where we want broken messages here to close the client
+ * connection. */
+int decodeHexMessage(struct client *c) {
     char *hex = c->buf;
     int l = strlen(hex), j;
     unsigned char msg[MODES_LONG_MSG_BYTES];
@@ -2454,9 +2200,8 @@ int decodeHexMessage(struct client *c)
     return 0;
 }
 
-/* Возвращаем описание самолетов в формате json. */
-char *aircraftsToJson(int *len) 
-{
+/* Return a description of planes in json. */
+char *aircraftsToJson(int *len) {
     struct aircraft *a = Modes.aircrafts;
     int buflen = 1024; /* The initial buffer is incremented as needed. */
     char *buf = malloc(buflen), *p = buf;
@@ -2464,8 +2209,7 @@ char *aircraftsToJson(int *len)
 
     l = snprintf(p,buflen,"[\n");
     p += l; buflen -= l;
-    while(a) 
-    {
+    while(a) {
         int altitude = a->altitude, speed = a->speed;
 
         /* Convert units to metric if --metric was specified. */
@@ -2474,8 +2218,7 @@ char *aircraftsToJson(int *len)
             speed *= 1.852;
         }
 
-        if (a->lat != 0 && a->lon != 0) 
-        {
+        if (a->lat != 0 && a->lon != 0) {
             l = snprintf(p,buflen,
                 "{\"hex\":\"%s\", \"flight\":\"%s\", \"lat\":%f, "
                 "\"lon\":%f, \"altitude\":%d, \"track\":%d, "
@@ -2484,8 +2227,7 @@ char *aircraftsToJson(int *len)
                 speed);
             p += l; buflen -= l;
             /* Resize if needed. */
-            if (buflen < 256) 
-            {
+            if (buflen < 256) {
                 int used = p-buf;
                 buflen += 1024; /* Our increment. */
                 buf = realloc(buf,used+buflen);
@@ -2510,14 +2252,13 @@ char *aircraftsToJson(int *len)
 #define MODES_CONTENT_TYPE_HTML "text/html;charset=utf-8"
 #define MODES_CONTENT_TYPE_JSON "application/json;charset=utf-8"
 
-/* Получаем заголовок HTTP-запроса и записываем ответ клиенту.
-  * Здесь мы снова предполагаем, что буфера сокета достаточно, не делая
-  * любой вид буферизации пользовательского пространства.
-  *
-  * Возвращает 1 в случае ошибки, чтобы сообщить вызывающему абоненту, что клиентское соединение должно быть установлено.
-  * быть закрытым. */
-int handleHTTPRequest(struct client *c) 
-{
+/* Get an HTTP request header and write the response to the client.
+ * Again here we assume that the socket buffer is enough without doing
+ * any kind of userspace buffering.
+ *
+ * Returns 1 on error to signal the caller the client connection should
+ * be closed. */
+int handleHTTPRequest(struct client *c) {
     char hdr[512];
     int clen, hdrlen;
     int httpver, keepalive;
@@ -2550,16 +2291,13 @@ int handleHTTPRequest(struct client *c)
         printf("HTTP requested URL: %s\n\n", url);
     }
 
-    /* Выбираем контент для отправки, пока у нас их только два:
-    * «/» -> Наше приложение Google Map.
-    * "/data.json" -> Наш ajax-запрос на обновление самолетов. */
-    if (strstr(url, "/data.json")) 
-    {
+    /* Select the content to send, we have just two so far:
+     * "/" -> Our google map application.
+     * "/data.json" -> Our ajax request to update planes. */
+    if (strstr(url, "/data.json")) {
         content = aircraftsToJson(&clen);
         ctype = MODES_CONTENT_TYPE_JSON;
-    }
-    else 
-    {
+    } else {
         struct stat sbuf;
         int fd = -1;
 
@@ -2600,7 +2338,8 @@ int handleHTTPRequest(struct client *c)
         printf("HTTP Reply header:\n%s", hdr);
 
     /* Send header and content. */
-    if (write(c->fd, hdr, hdrlen) != hdrlen || write(c->fd, content, clen) != clen)
+    if (write(c->fd, hdr, hdrlen) != hdrlen ||
+        write(c->fd, content, clen) != clen)
     {
         free(content);
         return 1;
@@ -2610,19 +2349,20 @@ int handleHTTPRequest(struct client *c)
     return !keepalive;
 }
 
-/* Эта функция опрашивает клиентов, используя read(), чтобы получить новые
-  * сообщения из сети.
-  *
-  * Предполагается, что сообщение должно быть отделено следующим сообщением
-  * разделитель 'sep', который представляет собой строку C, завершающуюся нулем.
-  *
-  * Каждое полученное полное сообщение декодируется и передается на более высокие уровни.
-  * вызов функции «обработчик».
-  *
-  * Handelr возвращает 0 в случае успеха или 1, чтобы сигнализировать об этой функции.
-  * следует закрыть соединение с клиентом в случае невосстановимости
-  * ошибки. */
-void modesReadFromClient(struct client *c, char *sep, int(*handler)(struct client *))
+/* This function polls the clients using read() in order to receive new
+ * messages from the net.
+ *
+ * The message is supposed to be separated by the next message by the
+ * separator 'sep', that is a null-terminated C string.
+ *
+ * Every full message received is decoded and passed to the higher layers
+ * calling the function 'handler'.
+ *
+ * The handelr returns 0 on success, or 1 to signal this function we
+ * should close the connection with the client in case of non-recoverable
+ * errors. */
+void modesReadFromClient(struct client *c, char *sep,
+                         int(*handler)(struct client *))
 {
     while(1) {
         int left = MODES_CLIENT_BUF_SIZE - c->buflen;
@@ -2677,28 +2417,28 @@ void modesReadFromClient(struct client *c, char *sep, int(*handler)(struct clien
     }
 }
 
-/* Чтение данных от клиентов. Эта функция фактически делегирует более низкий уровень
-  * функция, зависящая от типа сервиса (raw, http, ...). */
-void modesReadFromClients(void) 
-{
+/* Read data from clients. This function actually delegates a lower-level
+ * function that depends on the kind of service (raw, http, ...). */
+void modesReadFromClients(void) {
     int j;
     struct client *c;
 
-    for (j = 0; j <= Modes.maxfd; j++) 
-    {
+    for (j = 0; j <= Modes.maxfd; j++) {
         if ((c = Modes.clients[j]) == NULL) continue;
-        if (c->service == Modes.ris)  modesReadFromClient(c,"\n",decodeHexMessage);
-        else if (c->service == Modes.https) modesReadFromClient(c,"\r\n\r\n",handleHTTPRequest);
+        if (c->service == Modes.ris)
+            modesReadFromClient(c,"\n",decodeHexMessage);
+        else if (c->service == Modes.https)
+            modesReadFromClient(c,"\r\n\r\n",handleHTTPRequest);
     }
 }
 
-/* Эта функция используется, когда включен режим «только сеть», чтобы узнать, когда
-  * это как минимум новый клиент для обслуживания. Обратите внимание, что сетевая модель dump1090
-  * чрезвычайно тривиально, и функция заботится обо всех клиентах
-  * которым есть что обслуживать, без надлежащей библиотеки событий, поэтому
-  * здесь функция возвращается, пока есть один готовый клиент, или
-  * по истечении указанного таймаута в миллисекундах, без указания
-  * вызывающий абонент требует обслуживания клиента. */
+/* This function is used when "net only" mode is enabled to know when there
+ * is at least a new client to serve. Note that the dump1090 networking model
+ * is extremely trivial and a function takes care of handling all the clients
+ * that have something to serve, without a proper event library, so the
+ * function here returns as long as there is a single client ready, or
+ * when the specified timeout in milliesconds elapsed, without specifying to
+ * the caller what client requires to be served. */
 void modesWaitReadableClients(int timeout_ms) {
     struct timeval tv;
     fd_set fds;
@@ -2727,9 +2467,8 @@ void modesWaitReadableClients(int timeout_ms) {
 
 /* ============================ Terminal handling  ========================== */
 
-/* Обработка терминала изменения размера. */
-void sigWinchCallback() 
-{
+/* Handle resizing terminal. */
+void sigWinchCallback() {
     signal(SIGWINCH, SIG_IGN);
     Modes.interactive_rows = getTermRows();
     interactiveShowData();
@@ -2737,8 +2476,7 @@ void sigWinchCallback()
 }
 
 /* Get the number of rows after the terminal changes size. */
-int getTermRows() 
-{
+int getTermRows() {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     return w.ws_row;
@@ -2784,65 +2522,26 @@ void showHelp(void) {
     );
 }
 
- /* Эта функция вызывается main несколько раз в секунду, чтобы
-  * выполнять задачи, которые нам необходимо выполнять постоянно, например, принимать новых клиентов
-  * из сети, обновление экрана в интерактивном режиме и т.д. */
-void backgroundTasks(void) 
-{
+/* This function is called a few times every second by main in order to
+ * perform tasks we need to do continuously, like accepting new clients
+ * from the net, refreshing the screen in interactive mode, and so forth. */
+void backgroundTasks(void) {
     if (Modes.net) {
         modesAcceptClients();
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
     }
 
-    if (Modes.uart_net) 
+    /* Refresh screen when in interactive mode. */
+    if (Modes.interactive &&
+        (mstime() - Modes.interactive_last_update) >
+        MODES_INTERACTIVE_REFRESH_TIME)
     {
-       // modesAcceptClients();
-       // modesReadFromClients();
         interactiveRemoveStaleAircrafts();
-    }
-
-    /* Обновить экран в интерактивном режиме. */
-    if (Modes.interactive && (mstime() - Modes.interactive_last_update) > MODES_INTERACTIVE_REFRESH_TIME)
-    {
-        interactiveRemoveStaleAircrafts();   //  удаляем самолет из списка.
         interactiveShowData();
         Modes.interactive_last_update = mstime();
     }
-
-
-    /* Обновить экран в интерактивном режиме. */
-    if (Modes.uart && (mstime() - Modes.uart_last_update) > MODES_UART_REFRESH_TIME)
-    {
-        interactiveRemoveStaleAircrafts();   //  удаляем самолет из списка.
-        uartShowData();
-        Modes.uart_last_update = mstime();
-    }
 }
-
-
-void modesSendRawOutputUART(struct modesMessage* mm)
-{
-    char msg[128], * p = msg;
-    int j;
-
-    *p++ = '*';
-    for (j = 0; j < mm->msgbits / 8; j++)
-    {
-        sprintf(p, "%02X", mm->msg[j]);
-        p += 2;
-    }
-    *p++ = ';';
-    *p++ = '\n';
-   // modesSendAllClients(Modes.ros, msg, p - msg);
-}
-
-
-
-
-
-
-
 
 int main(int argc, char **argv) {
     int j;
@@ -2851,8 +2550,7 @@ int main(int argc, char **argv) {
     modesInitConfig();
 
     /* Parse the command line options */
-    for (j = 1; j < argc; j++) 
-    {
+    for (j = 1; j < argc; j++) {
         int more = j+1 < argc; /* There are more arguments. */
 
         if (!strcmp(argv[j],"--device-index") && more) {
@@ -2873,25 +2571,12 @@ int main(int argc, char **argv) {
             Modes.check_crc = 0;
         } else if (!strcmp(argv[j],"--raw")) {
             Modes.raw = 1;
-        }
-        else if (!strcmp(argv[j],"--net")) 
-        {
+        } else if (!strcmp(argv[j],"--net")) {
             Modes.net = 1;
-        } else if (!strcmp(argv[j],"--net-only")) 
-        {
+        } else if (!strcmp(argv[j],"--net-only")) {
             Modes.net = 1;
             Modes.net_only = 1;
-        } 
-        else if (!strcmp(argv[j], "--uart_net"))
-        {
-            Modes.uart_net = 1;
-        }
-        else if (!strcmp(argv[j], "--uart_net-only"))
-        {
-            Modes.uart_net = 1;
-            Modes.uart_net_only = 1;
-        }
-        else if (!strcmp(argv[j],"--net-ro-port") && more) {
+        } else if (!strcmp(argv[j],"--net-ro-port") && more) {
             modesNetServices[MODES_NET_SERVICE_RAWO].port = atoi(argv[++j]);
         } else if (!strcmp(argv[j],"--net-ri-port") && more) {
             modesNetServices[MODES_NET_SERVICE_RAWI].port = atoi(argv[++j]);
@@ -2905,33 +2590,13 @@ int main(int argc, char **argv) {
             Modes.metric = 1;
         } else if (!strcmp(argv[j],"--aggressive")) {
             Modes.aggressive++;
-        }
-        else if (!strcmp(argv[j],"--interactive")) 
-        {
+        } else if (!strcmp(argv[j],"--interactive")) {
             Modes.interactive = 1;
-        } 
-        else if (!strcmp(argv[j],"--interactive-rows")) 
-        {
+        } else if (!strcmp(argv[j],"--interactive-rows")) {
             Modes.interactive_rows = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--interactive-ttl")) 
-        {
+        } else if (!strcmp(argv[j],"--interactive-ttl")) {
             Modes.interactive_ttl = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j], "--uart"))
-        {
-            Modes.uart = 1;
-        }
-        else if (!strcmp(argv[j], "--uart-rows"))
-        {
-            Modes.uart_rows = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j], "--uart-ttl"))
-        {
-            Modes.uart_ttl = atoi(argv[++j]);
-        }
-        else if (!strcmp(argv[j],"--debug") && more) 
-        {
+        } else if (!strcmp(argv[j],"--debug") && more) {
             char *f = argv[++j];
             while(*f) {
                 switch(*f) {
@@ -2949,22 +2614,15 @@ int main(int argc, char **argv) {
                 }
                 f++;
             }
-        } else if (!strcmp(argv[j],"--stats")) 
-        {
+        } else if (!strcmp(argv[j],"--stats")) {
             Modes.stats = 1;
-        }
-        else if (!strcmp(argv[j],"--snip") && more) 
-        {
+        } else if (!strcmp(argv[j],"--snip") && more) {
             snipMode(atoi(argv[++j]));
             exit(0);
-        }
-        else if (!strcmp(argv[j],"--help")) 
-        {
+        } else if (!strcmp(argv[j],"--help")) {
             showHelp();
             exit(0);
-        }
-        else 
-        {
+        } else {
             fprintf(stderr,
                 "Unknown or not enough arguments for option '%s'.\n\n",
                 argv[j]);
@@ -2973,21 +2631,16 @@ int main(int argc, char **argv) {
         }
     }
 
-    /*Настройка для Sigwinch для обработки строк */
+    /* Setup for SIGWINCH for handling lines */
     if (Modes.interactive == 1) signal(SIGWINCH, sigWinchCallback);
 
     /* Initialization */
     modesInit();
-    if (Modes.net_only) 
-    {
+    if (Modes.net_only) {
         fprintf(stderr,"Net-only mode, no RTL device or file open.\n");
-    }
-    else if (Modes.filename == NULL) 
-    {
+    } else if (Modes.filename == NULL) {
         modesInitRTLSDR();
-    }
-    else 
-    {
+    } else {
         if (Modes.filename[0] == '-' && Modes.filename[1] == '\0') {
             Modes.fd = STDIN_FILENO;
         } else if ((Modes.fd = open(Modes.filename,O_RDONLY)) == -1) {
@@ -2995,46 +2648,35 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
-
     if (Modes.net) modesInitNet();
-    //!!if (Modes.uart_net) modesInitNet();
 
     /* If the user specifies --net-only, just run in order to serve network
      * clients without reading data from the RTL device. */
-    while (Modes.net_only) 
-    {
+    while (Modes.net_only) {
         backgroundTasks();
         modesWaitReadableClients(100);
     }
 
-    //!!while (Modes.uart_net_only)
-    //{
-    //   // backgroundTasks();
-    //   // modesWaitReadableClients(100);
-    //}
-
-    /* Создаем поток, который будет читать данные с устройства. */
+    /* Create the thread that will read the data from the device. */
     pthread_create(&Modes.reader_thread, NULL, readerThreadEntryPoint, NULL);
 
     pthread_mutex_lock(&Modes.data_mutex);
-    while(1) 
-    {
-        if (!Modes.data_ready) 
-        {
+    while(1) {
+        if (!Modes.data_ready) {
             pthread_cond_wait(&Modes.data_cond,&Modes.data_mutex);
             continue;
         }
         computeMagnitudeVector();
 
-        /* Сигнал другому потоку, что мы обработали доступные данные
-        * и нам нужно больше (полезно для --ifile). */
+        /* Signal to the other thread that we processed the available data
+         * and we want more (useful for --ifile). */
         Modes.data_ready = 0;
         pthread_cond_signal(&Modes.data_cond);
 
-        /* Обработка данных после снятия блокировки, чтобы захват
-        * поток может читать данные, пока мы выполняем дорогостоящие вычисления
-        *штуки* одновременно. (Это должно быть полезно только при очень
-        * медленные процессоры). */
+        /* Process data after releasing the lock, so that the capturing
+         * thread can read data while we perform computationally expensive
+         * stuff * at the same time. (This should only be useful with very
+         * slow processors). */
         pthread_mutex_unlock(&Modes.data_mutex);
         detectModeS(Modes.magnitude, Modes.data_len/2);
         backgroundTasks();
@@ -3042,9 +2684,8 @@ int main(int argc, char **argv) {
         if (Modes.exit) break;
     }
 
-    /* Если были указаны --ifile и --stats, вывести статистику. */
-    if (Modes.stats && Modes.filename) 
-    {
+    /* If --ifile and --stats were given, print statistics. */
+    if (Modes.stats && Modes.filename) {
         printf("%lld valid preambles\n", Modes.stat_valid_preamble);
         printf("%lld demodulated again after phase correction\n",
             Modes.stat_out_of_phase);
