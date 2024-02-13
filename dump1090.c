@@ -2526,12 +2526,14 @@ void showHelp(void) {
 /* This function is called a few times every second by main in order to
  * perform tasks we need to do continuously, like accepting new clients
  * from the net, refreshing the screen in interactive mode, and so forth. */
-void backgroundTasks(void) {
- /*   if (Modes.net) {
-        modesAcceptClients();*/
+void backgroundTasks(void) 
+{
+    if (Modes.net) 
+    {
+        modesAcceptClients();
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
-    //}
+    }
 
     /* Refresh screen when in interactive mode. */
     if (Modes.interactive &&
