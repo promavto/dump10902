@@ -2035,12 +2035,12 @@ void uartShowData(void)
         printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
             a->hexaddr, a->flight, altitude, speed,
             a->lat, a->lon, a->track, a->messages,
-            (int)(now - a->seen)) >> "/dev/tty";
+            (int)(now - a->seen));
 
-        //write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-        //write(serial_port, " / ", sizeof(" / "));
-        //write(serial_port, a->flight, sizeof(a->flight));
-        //write(serial_port, "\n", sizeof("\n"));
+        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+        write(serial_port, " / ", sizeof(" / "));
+        write(serial_port, a->flight, sizeof(a->flight));
+        write(serial_port, "\n", sizeof("\n"));
  
         a = a->next;
         count++;
