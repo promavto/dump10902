@@ -1975,9 +1975,9 @@ void interactiveShowData(void)
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
 
-        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+ /*       write(serial_port, a->hexaddr, sizeof(a->hexaddr));
         write(serial_port, "/", sizeof("/"));
-        write(serial_port, a->flight, sizeof(a->flight));
+        write(serial_port, a->flight, sizeof(a->flight));*/
 
         a = a->next;
         count++;
@@ -2049,10 +2049,10 @@ void uartShowData(void)
             a->lat, a->lon, a->track, a->messages,
             (int)(now - a->seen));
 
-        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-        write(serial_port, " / ", sizeof(" / "));
-        write(serial_port, a->flight, sizeof(a->flight));
-        write(serial_port, "\n", sizeof("\n"));
+        //write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+        //write(serial_port, " / ", sizeof(" / "));
+        //write(serial_port, a->flight, sizeof(a->flight));
+        //write(serial_port, "\n", sizeof("\n"));
  
         a = a->next;
         count++;
@@ -2275,15 +2275,16 @@ void modesSendAllClients(int service, void *msg, int len)
 void modesSendRawOutput(struct modesMessage *mm) 
 {
     char msg[128], *p = msg;
-   // char msg1[128];
+    char msg1[128], *p1 = msg;
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
-   // write(serial_port, msg, 32);
-   // write(serial_port, "\n", 2);
+    //write(serial_port, msg, 32);
+    //write(serial_port, "\n", 2);
 
     int j;
+    int j1;
 
     *p++ = '*';
-    for (j = 0; j < mm->msgbits/8; j++) 
+    for (j = 0; j < mm->msgbits/8; j++)  
     {
         sprintf(p, "%02X", mm->msg[j]);
         p += 2;
@@ -2291,8 +2292,30 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = ';';
     *p++ = '\n';
 
-    write(serial_port, p, 24);
-    write(serial_port, "\n", 1);
+ /*   write(serial_port, p, 24);
+    write(serial_port, "\n", 1);*/
+
+    *p1++ = '*';
+    for (j1 = 0; j1 < mm->msgbits / 8; j1++)
+    {
+        sprintf(p1, "%02X", mm->msg1[j1]);
+        p1 += 2;
+    }
+    *p1++ = ';';
+    *p1++ = '\n';
+
+
+
+
+    if (write(serial_port, p1, sizeof(p1)) != sizeof(p1))
+    {
+        free(p1);
+    }
+ /*   free(content);*/
+
+
+
+
 
     modesSendAllClients(Modes.ros, msg, p-msg);
 
@@ -2556,8 +2579,7 @@ int handleHTTPRequest(struct client *c)
         printf("HTTP Reply header:\n%s", hdr);
 
     /* Send header and content. */
-    if (write(c->fd, hdr, hdrlen) != hdrlen ||
-        write(c->fd, content, clen) != clen)
+    if (write(c->fd, hdr, hdrlen) != hdrlen || write(c->fd, content, clen) != clen)
     {
         free(content);
         return 1;
