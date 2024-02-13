@@ -2088,7 +2088,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = '\n';
 
     write(serial_port, msg, p - msg);
-
+    free(msg);
     modesSendAllClients(Modes.ros, msg, p-msg);
 }
 
