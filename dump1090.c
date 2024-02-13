@@ -351,11 +351,40 @@ void modesInit(void) {
     ///*======================= UART ====================================*/
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
     struct termios tty;
+
     if (tcgetattr(serial_port, &tty) != 0)
     {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
     }
+    /* настройки порта */
+    tty.c_cflag &= ~PARENB;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+    tty.c_cflag &= ~CRTSCTS;
+    tty.c_cflag |= CREAD | CLOCAL;
 
+    tty.c_lflag &= ~ICANON;
+    tty.c_lflag &= ~ECHO;
+    tty.c_lflag &= ~ECHOE;
+    tty.c_lflag &= ~ECHONL;
+    tty.c_lflag &= ~ISIG;
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+
+    tty.c_oflag &= ~OPOST;
+    tty.c_oflag &= ~ONLCR;
+
+    tty.c_cc[VTIME] = 10;
+    tty.c_cc[VMIN] = 0;
+
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
+    {
+        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+    }
     unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
     write(serial_port, msg, sizeof(msg));
 
@@ -1947,7 +1976,7 @@ void interactiveShowData(void)
 void uartShowData(void)
 {
     struct aircraft* a = Modes.aircrafts;
-   // time_t now = time(NULL);
+    time_t now = time(NULL);
     int count = 0;
 
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
@@ -2003,17 +2032,16 @@ void uartShowData(void)
             speed *= 1.852;
         }
 
-        //printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
-        //    a->hexaddr, a->flight, altitude, speed,
-        //    a->lat, a->lon, a->track, a->messages,
-        //    (int)(now - a->seen));
+        printf("%-6s %-8s %-9d %-7d %-7.03f   %-7.03f   %-3d   %-9ld %d sec\n",
+            a->hexaddr, a->flight, altitude, speed,
+            a->lat, a->lon, a->track, a->messages,
+            (int)(now - a->seen)) >> "/dev/tty";
 
-        write(serial_port, a->hexaddr, sizeof(a->hexaddr));
-        write(serial_port, " / ", sizeof(" / "));
-        write(serial_port, a->flight, sizeof(a->flight));
-        write(serial_port, "\n", sizeof("\n"));
-        write(serial_port, "\n", sizeof("\n"));
-
+        //write(serial_port, a->hexaddr, sizeof(a->hexaddr));
+        //write(serial_port, " / ", sizeof(" / "));
+        //write(serial_port, a->flight, sizeof(a->flight));
+        //write(serial_port, "\n", sizeof("\n"));
+ 
         a = a->next;
         count++;
     }
