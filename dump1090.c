@@ -2012,6 +2012,7 @@ void uartShowData(void)
         write(serial_port, " / ", sizeof(" / "));
         write(serial_port, a->flight, sizeof(a->flight));
         write(serial_port, "\n", sizeof("\n"));
+        write(serial_port, "\n", sizeof("\n"));
 
         a = a->next;
         count++;
