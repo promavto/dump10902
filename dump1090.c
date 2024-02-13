@@ -2275,7 +2275,7 @@ void modesSendAllClients(int service, void *msg, int len)
 void modesSendRawOutput(struct modesMessage *mm) 
 {
     char msg[128], *p = msg;
-    char msg1[128], *p1 = msg1;
+   // char msg1[128], *p1 = msg1;
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
     struct termios tty;
 
@@ -2314,7 +2314,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     }
 
     int j;
-    int j1;
+   // int j1;
 
     *p++ = '*';
     for (j = 0; j < mm->msgbits/8; j++)  
