@@ -2291,7 +2291,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = ';';
     *p++ = '\n';
 
-    write(serial_port, *p, 24);
+    write(serial_port, p, 24);
     write(serial_port, "\n", 1);
 
     modesSendAllClients(Modes.ros, msg, p-msg);
