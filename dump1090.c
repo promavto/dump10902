@@ -2275,10 +2275,43 @@ void modesSendAllClients(int service, void *msg, int len)
 void modesSendRawOutput(struct modesMessage *mm) 
 {
     char msg[128], *p = msg;
-    char msg1[128], *p1 = msg;
+    char msg1[128], *p1 = msg1;
     int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    //write(serial_port, msg, 32);
-    //write(serial_port, "\n", 2);
+    struct termios tty;
+
+    if (tcgetattr(serial_port, &tty) != 0)
+    {
+        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+    }
+    /* настройки порта */
+    tty.c_cflag &= ~PARENB;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+    tty.c_cflag &= ~CRTSCTS;
+    tty.c_cflag |= CREAD | CLOCAL;
+
+    tty.c_lflag &= ~ICANON;
+    tty.c_lflag &= ~ECHO;
+    tty.c_lflag &= ~ECHOE;
+    tty.c_lflag &= ~ECHONL;
+    tty.c_lflag &= ~ISIG;
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+
+    tty.c_oflag &= ~OPOST;
+    tty.c_oflag &= ~ONLCR;
+
+    tty.c_cc[VTIME] = 10;
+    tty.c_cc[VMIN] = 0;
+
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
+    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
+    {
+        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+    }
 
     int j;
     int j1;
