@@ -151,7 +151,7 @@ struct {
     /* Networking */
     char aneterr[ANET_ERR_LEN];
     struct client *clients[MODES_NET_MAX_FD]; /* Our clients. */
-    int maxfd;                      /* Greatest fd currently active. */
+    int maxfd;                      /* Самый большой FD, активный в данный момент. */
     int sbsos;                      /* SBS output listening socket. */
     int ros;                        /* Raw output listening socket. */
     int ris;                        /* Raw input listening socket. */
@@ -2243,26 +2243,14 @@ void modesSendAllClients(int service, void *msg, int len)
 {
     int j;
     struct client *c;
- /*   int serial_port = open("/dev/ttyAMA0", O_RDWR);*/
- /*   struct termios tty;
-       if (tcgetattr(serial_port, &tty) != 0)
-       {
-           printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-       }*/
-
-       // unsigned char msg1[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
-   // write(serial_port, msg, sizeof(len));
- //   write(serial_port, "LEN= "+ (char)len, 10);
-
-
+ 
     for (j = 0; j <= Modes.maxfd; j++) 
     {
         c = Modes.clients[j];
         if (c && c->service == service) 
         {
             int nwritten = write(j, msg, len);
-           // write(serial_port, msg, sizeof(len));
-             
+           
             if (nwritten != len) 
             {
                 modesFreeClient(j);
@@ -2348,7 +2336,7 @@ void modesSendRawOutput(struct modesMessage *mm)
 
 
 
-    write(serial_port, p, sizeof(p));
+    write(serial_port, msg, p - msg);
 
     modesSendAllClients(Modes.ros, msg, p-msg);
 
