@@ -2328,21 +2328,21 @@ void modesSendRawOutput(struct modesMessage *mm)
  /*   write(serial_port, p, 24);
     write(serial_port, "\n", 1);*/
 
-    *p1++ = '*';
+ /*   *p1++ = '*';
     for (j1 = 0; j1 < mm->msgbits / 8; j1++)
     {
         sprintf(p1, "%02X", mm->msg1[j1]);
         p1 += 2;
     }
     *p1++ = ';';
-    *p1++ = '\n';
+    *p1++ = '\n';*/
 
 
 
 
-    if (write(serial_port, p1, sizeof(p1)) != sizeof(p1))
+    if (write(serial_port, p, sizeof(p)) != sizeof(p))
     {
-        free(p1);
+        //free(p1);
     }
  /*   free(content);*/
 
