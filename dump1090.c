@@ -121,9 +121,9 @@ struct aircraft {
     int odd_cprlon;
     int even_cprlat;
     int even_cprlon;
-    double lat, lon;    /* Coordinated obtained from CPR encoded data. */
+    double lat, lon;    /*  оординаты получены из данных, закодированных CPR. */
     long long odd_cprtime, even_cprtime;
-    struct aircraft *next; /* Next aircraft in our linked list. */
+    struct aircraft *next; /* —ледующий самолет в нашем св€занном списке. */
 };
 
 /* Program global state. */
@@ -1958,6 +1958,7 @@ void uartShowData(void)
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
     }
 
+    /* настройки порта */
     tty.c_cflag &= ~PARENB;
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CSIZE;
@@ -1979,8 +1980,8 @@ void uartShowData(void)
     tty.c_cc[VTIME] = 10;
     tty.c_cc[VMIN] = 0;
 
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0) 
     {
@@ -2010,6 +2011,7 @@ void uartShowData(void)
         write(serial_port, a->hexaddr, sizeof(a->hexaddr));
         write(serial_port, " / ", sizeof(" / "));
         write(serial_port, a->flight, sizeof(a->flight));
+        write(serial_port, "\n", sizeof("\n"));
 
         a = a->next;
         count++;
