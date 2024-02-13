@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <math.h>
-#include <sys/time.h>
+#include <sys/time.h> 
 #include <signal.h>
 #include <fcntl.h>
 #include <ctype.h>
@@ -2527,11 +2527,11 @@ void showHelp(void) {
  * perform tasks we need to do continuously, like accepting new clients
  * from the net, refreshing the screen in interactive mode, and so forth. */
 void backgroundTasks(void) {
-    if (Modes.net) {
-        modesAcceptClients();
+ /*   if (Modes.net) {
+        modesAcceptClients();*/
         modesReadFromClients();
         interactiveRemoveStaleAircrafts();
-    }
+    //}
 
     /* Refresh screen when in interactive mode. */
     if (Modes.interactive &&
@@ -2542,6 +2542,8 @@ void backgroundTasks(void) {
         interactiveShowData();
         Modes.interactive_last_update = mstime();
     }
+
+
 }
 
 int main(int argc, char **argv) {
