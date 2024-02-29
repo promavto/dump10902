@@ -2071,8 +2071,8 @@ void modesSendRawOutput(struct modesMessage *mm)
     tty.c_cc[VTIME] = 10;
     tty.c_cc[VMIN] = 0;
 
-    cfsetispeed(&tty, B57600);
-    cfsetospeed(&tty, B57600);
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
 
     if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
     {
