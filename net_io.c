@@ -264,7 +264,8 @@ void modesSendBeastOutput(struct modesMessage *mm) {
 // Write raw output to TCP clients
 //
 void modesSendRawOutput(struct modesMessage *mm) 
-{
+{ 
+    char msg[128], *p = msg;
     char *p = &Modes.rawOut[Modes.rawOutUsed];
     int  msgLen = mm->msgbits / 8;
     int j;
@@ -318,6 +319,18 @@ void modesSendRawOutput(struct modesMessage *mm)
         Modes.rawOutUsed += 12; // additional 12 characters for timestamp
     } else
         *p++ = '*';
+
+/*
+    for (j = 0; j < mm->msgbits/8; j++) 
+    {
+        sprintf(p, "%02X", mm->msg[j]);
+        p += 2;
+    }
+    *p++ = ';';
+    *p++ = '\n';
+
+*/
+
 
     for (j = 0; j < msgLen; j++) {
         sprintf(p, "%02X", mm->msg[j]);
