@@ -265,7 +265,7 @@ void modesSendBeastOutput(struct modesMessage *mm) {
 //
 void modesSendRawOutput(struct modesMessage *mm) 
 { 
-    char msg[128], *p = msg;
+    char msg[128];
     char *p = &Modes.rawOut[Modes.rawOutUsed];
     int  msgLen = mm->msgbits / 8;
     int j;
