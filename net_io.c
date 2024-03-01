@@ -308,6 +308,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     }
+	printf("Test RTLSDR\n");
 
     if (Modes.mlat && mm->timestampMsg) {
         *p++ = '@';
@@ -317,7 +318,8 @@ void modesSendRawOutput(struct modesMessage *mm)
             p += 2;
         }
         Modes.rawOutUsed += 12; // additional 12 characters for timestamp
-    } else
+    }
+	else
         *p++ = '*';
 
 /*
