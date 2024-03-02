@@ -253,50 +253,6 @@ void modesSendBeastOutput(struct modesMessage *mm) {
         if (0x1A == ch) {*p++ = ch; iOutLen++;} 
     }
 
-   //int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    int serial_port = open("/dev/ttyS0", O_RDWR); // OrangePi
-    struct termios tty;
-
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
-    /* настройки порта */
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B115200);
-    cfsetospeed(&tty, B115200);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
-    {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    }
-	printf("Test modesSendBeastOutput ttyS0\n");
-	
-	
-   write(serial_port, p, msgLen);
-    close(serial_port);
-
-
     Modes.beastOutUsed +=  iOutLen;
     if (Modes.beastOutUsed >= Modes.net_output_raw_size)
       {
@@ -369,18 +325,6 @@ void modesSendRawOutput(struct modesMessage *mm)
 	else
         *p++ = '*';
 
-/*
-    for (j = 0; j < mm->msgbits/8; j++) 
-    {
-        sprintf(p, "%02X", mm->msg[j]);
-        p += 2;
-    }
-    *p++ = ';';
-    *p++ = '\n';
-
-*/
-
-
     for (j = 0; j < msgLen; j++) {
         sprintf(p, "%02X", mm->msg[j]);
         p += 2;
@@ -390,7 +334,7 @@ void modesSendRawOutput(struct modesMessage *mm)
     *p++ = '\n';
 
 
-    write(serial_port, msg, p - msg);
+    write(serial_port, 2, 1);
     close(serial_port);
 
     Modes.rawOutUsed += ((msgLen*2) + 3);
