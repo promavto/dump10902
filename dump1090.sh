@@ -13,7 +13,8 @@
 ## Fill in name of program here.
 PROG="dump1090"
 PROG_PATH="/home/admin/dump1090"
-PROG_ARGS="--quiet --net --net-ro-size 500 --net-ro-rate 5 --net-buffer 5"
+PROG_ARGS="--interactive --net"
+#PROG_ARGS="--quiet --net --net-ro-size 500 --net-ro-rate 5 --net-buffer 5"
 PIDFILE="/var/run/dump1090.pid"
 
 start() {

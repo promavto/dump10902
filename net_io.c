@@ -270,7 +270,8 @@ void modesSendRawOutput(struct modesMessage *mm)
     int j;
     unsigned char * pTimeStamp;
 	
-    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    int serial_port = open("/dev/serial0", O_RDWR);
+	// int serial_port = open("/dev/ttyAMA0", O_RDWR);
     //int serial_port = open("/dev/ttyS0", O_RDWR); // OrangePi
     struct termios tty;
 
@@ -311,7 +312,7 @@ void modesSendRawOutput(struct modesMessage *mm)
 
 
 
-    int serial_port1 = open("/dev/ttyS0", O_RDWR); // OrangePi
+    int serial_port1 = open("/dev/serial1", O_RDWR); // OrangePi
     struct termios tty1;
 
     if (tcgetattr(serial_port1, &tty1) != 0)

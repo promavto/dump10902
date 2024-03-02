@@ -29,7 +29,7 @@
 //
 #include "coaa.h"
 #include "view1090.h"
-#include <termios.h>
+
 struct stModes Modes; struct stDF tDF;
 //
 // ============================= Utility functions ==========================
@@ -129,48 +129,7 @@ void view1090Init(void) {
         Modes.bUserFlags |= MODES_USER_LATLON_VALID;
     }
 
-   //int serial_port = open("/dev/ttyS0", O_RDWR);
-    int serial_port = open("/dev/ttyAMA0", O_RDWR); // OrangePi
-    struct termios tty;
-
-    if (tcgetattr(serial_port, &tty) != 0)
-    {
-        printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    }
-    /* настройки порта */
-    tty.c_cflag &= ~PARENB;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~CRTSCTS;
-    tty.c_cflag |= CREAD | CLOCAL;
-
-    tty.c_lflag &= ~ICANON;
-    tty.c_lflag &= ~ECHO;
-    tty.c_lflag &= ~ECHOE;
-    tty.c_lflag &= ~ECHONL;
-    tty.c_lflag &= ~ISIG;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
-
-    tty.c_oflag &= ~OPOST;
-    tty.c_oflag &= ~ONLCR;
-
-    tty.c_cc[VTIME] = 10;
-    tty.c_cc[VMIN] = 0;
-
-    cfsetispeed(&tty, B115200);
-    cfsetospeed(&tty, B115200);
-
-    if (tcsetattr(serial_port, TCSANOW, &tty) != 0)
-    {
-        printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    }
-	printf("Test RTLSDR ttyAMA0\n");
-    close(serial_port);
-
-
-    // Prepare error correction tables
+      // Prepare error correction tables
     modesInitErrorInfo();
 }
 
