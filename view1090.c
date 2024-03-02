@@ -129,8 +129,8 @@ void view1090Init(void) {
         Modes.bUserFlags |= MODES_USER_LATLON_VALID;
     }
 
-   //int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    int serial_port = open("/dev/ttyS0", O_RDWR); // OrangePi
+   //int serial_port = open("/dev/ttyS0", O_RDWR);
+    int serial_port = open("/dev/ttyAMA0", O_RDWR); // OrangePi
     struct termios tty;
 
     if (tcgetattr(serial_port, &tty) != 0)
@@ -166,8 +166,8 @@ void view1090Init(void) {
     {
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     }
-	printf("Test RTLSDR ttyS0\n");
-
+	printf("Test RTLSDR ttyAMA0\n");
+    close(serial_port);
 
 
     // Prepare error correction tables
