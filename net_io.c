@@ -58,10 +58,6 @@ struct service services[MODES_NET_SERVICES_NUM];
 
 void modesInitNet(void) {
     int j;
-
-
-
-
 	struct service svc[MODES_NET_SERVICES_NUM] = {
 		{"Raw TCP output", &Modes.ros, Modes.net_output_raw_port, 1},
 		{"Raw TCP input", &Modes.ris, Modes.net_input_raw_port, 1},
@@ -273,16 +269,16 @@ void modesSendRawOutput(struct modesMessage *mm)
     int  msgLen = mm->msgbits / 8;
     int j;
     unsigned char * pTimeStamp;
-/*	
-    //int serial_port = open("/dev/ttyAMA0", O_RDWR);
-    int serial_port = open("/dev/ttyprintk", O_RDWR); // OrangePi
+	
+    int serial_port = open("/dev/ttyAMA0", O_RDWR);
+    //int serial_port = open("/dev/ttyS0", O_RDWR); // OrangePi
     struct termios tty;
 
     if (tcgetattr(serial_port, &tty) != 0)
     {
         printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
     }
-    // настройки порта 
+    /* настройки порта */
     tty.c_cflag &= ~PARENB;
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CSIZE;
@@ -312,14 +308,6 @@ void modesSendRawOutput(struct modesMessage *mm)
         printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     }
 	printf("Test RTLSDR ttyS0\n");
-*/
-
-#!/usr/bin/env python3
-import serial
-//if __name__ == '__main__':
-ser = serial.Serial('/dev/ttyS0', 115200, timeout=1);
-ser.flush();
-
 
     if (Modes.mlat && mm->timestampMsg) {
         *p++ = '@';
@@ -341,10 +329,9 @@ ser.flush();
     *p++ = ';';
     *p++ = '\n';
 
-  ser.write ("Hello from Raspberry Pi! \ n" .encode ('utf-8'));
-  ser.flush();
-     //write(serial_port, msg, p - msg);
-     //close(serial_port);
+
+     write(serial_port, msg, p - msg);
+     close(serial_port);
 
     Modes.rawOutUsed += ((msgLen*2) + 3);
     if (Modes.rawOutUsed >= Modes.net_output_raw_size)
