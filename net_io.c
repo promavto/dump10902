@@ -293,7 +293,7 @@ void modesSendBeastOutput(struct modesMessage *mm) {
 	printf("Test modesSendBeastOutput ttyS0\n");
 	
 	
-   write(serial_port, msg, p - msg);
+   write(serial_port, p, msgLen);
     close(serial_port);
 
 
