@@ -430,11 +430,11 @@ void modesSendRawOutput(struct modesMessage *mm)
     close(serial_port);
 
     Modes.rawOutUsed += ((msgLen*2) + 3);
-    if (Modes.rawOutUsed >= Modes.net_output_raw_size)
-    {
-       modesSendAllClients(Modes.ros, Modes.rawOut, Modes.rawOutUsed);
-       Modes.rawOutUsed = 0;
-       Modes.net_output_raw_rate_count = 0;
+ //   if (Modes.rawOutUsed >= Modes.net_output_raw_size)
+ //   {
+ //      modesSendAllClients(Modes.ros, Modes.rawOut, Modes.rawOutUsed);
+ //      Modes.rawOutUsed = 0;
+ //      Modes.net_output_raw_rate_count = 0;
     }
 }
 //
