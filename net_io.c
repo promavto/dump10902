@@ -435,7 +435,7 @@ void modesSendRawOutput(struct modesMessage *mm)
  //      modesSendAllClients(Modes.ros, Modes.rawOut, Modes.rawOutUsed);
  //      Modes.rawOutUsed = 0;
  //      Modes.net_output_raw_rate_count = 0;
-    }
+   // }
 }
 //
 //=========================================================================
